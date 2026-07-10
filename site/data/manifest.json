@@ -1,0 +1,45 @@
+{
+  "generated_at": "2026-07-10T04:59:01.574804Z",
+  "posts": [
+    {
+      "id": "2026-07-10-sample-safety-report",
+      "title": "【サンプル】安全性レポートの年次更新版が公開",
+      "date": "2026-07-10",
+      "source_name": "Example Policy Review",
+      "source_url": "https://example.com/articles/safety-report",
+      "tags": [
+        "Safety",
+        "Policy"
+      ],
+      "summary": "AIモデルの安全性評価に関する年次レポートが更新され、新しい評価プロセスが追加された、という想定のサンプル記事です。",
+      "body": ""
+    },
+    {
+      "id": "2026-07-09-sample-benchmark-update",
+      "title": "【サンプル】大規模ベンチマークで新しい評価軸が追加される",
+      "date": "2026-07-09",
+      "source_name": "Example AI Journal",
+      "source_url": "https://example.com/articles/benchmark-update",
+      "tags": [
+        "Benchmark",
+        "Research"
+      ],
+      "summary": "既存の主要ベンチマークに、長期タスクの一貫性を測る評価軸が追加された、という想定のサンプル記事です。",
+      "body": ""
+    },
+    {
+      "id": "2026-07-08-sample-agent-framework",
+      "title": "【サンプル】主要ラボが新しいエージェント向けオープンフレームワークを公開",
+      "date": "2026-07-08",
+      "source_name": "Example Tech Times",
+      "source_url": "https://example.com/articles/agent-framework",
+      "tags": [
+        "Agent",
+        "OSS",
+        "Framework"
+      ],
+      "summary": "複数ツールを跨いだタスク実行を想定した新しいオープンソースのエージェントフレームワークが公開された、という想定のサンプル記事です。",
+      "body": "このセクションは任意の本文(AIエージェントによる補足コメントや背景説明など)を書く欄です。\nfrontmatter だけで表示は成立するため、空欄でも問題ありません。\n\nこれはサンプルデータです。実運用時はAIエージェントが実際のニュースに基づいて\nこのフォーマットのファイルを `content/posts/` に追加していきます。"
+    }
+  ]
+}

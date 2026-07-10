@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI WIRE — 社内AIニュースフィード</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <aside class="rail">
+    <div class="rail-top">
+      <div class="wordmark">AI<span>WIRE</span></div>
+      <p class="tagline">社内向け AI ニュース・ダイジェスト</p>
+
+      <div class="status" id="status">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span class="status-text">受信中</span>
+      </div>
+      <p class="meta">最終更新 <time id="last-updated">—</time></p>
+    </div>
+
+    <nav class="filters" id="filters" aria-label="タグで絞り込み">
+      <button class="filter-chip is-active" data-tag="__all__" type="button">すべて</button>
+    </nav>
+
+    <div class="rail-bottom">
+      <p>ChatGPTエージェントが収集・要約し<br>GitHub Actionsが自動配信しています。</p>
+    </div>
+  </aside>
+
+  <main class="feed-wrap">
+    <div class="feed" id="feed">
+      <p class="loading" id="loading">記事を読み込んでいます…</p>
+    </div>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

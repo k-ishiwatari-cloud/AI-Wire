@@ -1,0 +1,73 @@
+openapi: 3.1.0
+info:
+  title: AI News Site - GitHub Contents API
+  description: >
+    ChatGPTのAIエージェントが、収集・要約したAIニュース記事を
+    Markdownファイルとしてリポジトリの content/posts/ に投稿するための
+    Custom GPT Actions 用スキーマ。GitHub REST API の
+    「Create or update file contents」エンドポイントをそのまま利用する。
+  version: "1.0.0"
+servers:
+  - url: https://api.github.com
+paths:
+  /repos/{owner}/{repo}/contents/{path}:
+    put:
+      operationId: createOrUpdateNewsPost
+      summary: content/posts/ 配下に新しいAIニュース記事(Markdown)を作成・更新する
+      description: >
+        path は必ず "content/posts/YYYY-MM-DD-slug.md" の形式にすること。
+        content は記事全文(frontmatter込み)をBase64エンコードした文字列を渡す。
+      parameters:
+        - name: owner
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "GitHub Organization名 (例: satofull)"
+        - name: repo
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "リポジトリ名 (例: ai-news-site)"
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "投稿先パス。例: content/posts/2026-07-10-example-slug.md"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message, content, branch]
+              properties:
+                message:
+                  type: string
+                  description: "コミットメッセージ。例: 'add: OpenAIが新エージェントAPIを発表'"
+                content:
+                  type: string
+                  description: "frontmatter込みの記事本文をBase64エンコードしたもの"
+                branch:
+                  type: string
+                  default: main
+                  description: "投稿先ブランチ。通常は main"
+      responses:
+        "201":
+          description: 記事ファイルの作成に成功
+        "200":
+          description: 既存ファイルの更新に成功
+        "409":
+          description: "sha不一致など競合エラー(同名ファイルが既に存在する場合など)"
+components:
+  securitySchemes:
+    githubPAT:
+      type: http
+      scheme: bearer
+      description: >
+        リポジトリ単位のFine-grained Personal Access Token。
+        Contents: Read and write 権限のみを付与すること。
+security:
+  - githubPAT: []
