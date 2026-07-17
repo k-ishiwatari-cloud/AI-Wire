@@ -62,6 +62,7 @@ paths:
         "409":
           description: "sha不一致など競合エラー(同名ファイルが既に存在する場合など)"
 components:
+  schemas: {}
   securitySchemes:
     githubPAT:
       type: http
