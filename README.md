@@ -17,15 +17,17 @@ ai-news-site/
 │   └── posts/                      # 1記事1ファイル(Markdown + frontmatter)
 │       └── 2026-07-10-xxxx.md
 ├── scripts/
-│   └── build_manifest.py           # posts/*.md → site/data/manifest.json
+│   ├── build_manifest.py           # posts/*.md → site/data/manifest.json
+│   └── publish_post.py             # ローカルの記事ファイルをGitHubへ直接投稿
 ├── site/                           # GitHub Pagesとして公開される実体
 │   ├── index.html
 │   ├── style.css
 │   ├── app.js
 │   └── data/manifest.json          # ビルド時に自動生成(手動編集不要)
 ├── chatgpt-agent/
-│   ├── openapi-github-actions.yaml # Custom GPT Actions用スキーマ
-│   └── agent-instructions.md       # Custom GPTのInstructions欄テンプレート
+│   ├── draft-prompt-template.md    # 通常のChatGPTに貼り付ける記事作成プロンプト
+│   ├── openapi-github-actions.yaml # (参考)Custom GPT Actions用スキーマ
+│   └── agent-instructions.md       # (参考)Custom GPTのInstructions欄テンプレート
 ├── .github/workflows/deploy.yml    # push契機で自動ビルド・デプロイ
 └── README.md
 ```
@@ -83,20 +85,39 @@ git push -u origin main
 数分でサイトが公開されます。公開URLはリポジトリの Pages 設定画面、
 またはActionsの実行ログに表示されます。
 
-### 3. ChatGPTエージェントと連携する
+### 3. 記事を投稿する(ChatGPT + 手動スクリプト方式)
 
-1. ChatGPTで **Explore GPTs > Create** からCustom GPTを新規作成
-2. `chatgpt-agent/agent-instructions.md` の内容をInstructions欄に貼り付け、
-   Organization名などを実際の値に置き換える
-3. Actionsに `chatgpt-agent/openapi-github-actions.yaml` を登録
-4. GitHubで **Fine-grained Personal Access Token** を発行
-   - 対象リポジトリをこのリポジトリのみに限定
-   - 権限は `Contents: Read and write` のみ
-5. Custom GPTのAuthenticationに、発行したPATをBearer Tokenとして設定
+Custom GPT Actionsは、モデルがAction呼び出し自体を実行せず説明で
+終わらせてしまう挙動が確認されたため(2026年7月時点、OpenAIコミュニティ
+フォーラムでも同様の報告あり)、現在は以下の**確実に動く方式**を採用して
+います。
 
-これで、エージェントに「今日のAIニュースを投稿して」と依頼すると、
-GitHub API経由で `content/posts/` に記事ファイルが追加され、
-自動的にサイトへ反映されます。
+1. `chatgpt-agent/draft-prompt-template.md` 内のプロンプトを、通常の
+   ChatGPT(Web検索が使えるモデル)にそのまま貼り付ける
+2. 出力されたMarkdownを `YYYY-MM-DD-slug.md` という名前でローカルに保存
+3. 投稿スクリプトを実行
+
+```bash
+python scripts/publish_post.py path/to/2026-07-17-example-slug.md
+```
+
+初回はGitHubの **Fine-grained Personal Access Token**(対象リポジトリ
+限定、`Contents: Read and write` のみ)の入力を求められます。保存するか
+聞かれた場合 `y` と答えると、次回以降は入力不要になります(トークンは
+`scripts/.github_token` に保存され、`.gitignore` で除外済み)。
+
+frontmatterの必須フィールドが欠けている場合は、投稿前にスクリプト側で
+エラーになり弾かれます。
+
+#### (参考)Custom GPT Actionsによる完全自動化について
+
+`chatgpt-agent/openapi-github-actions.yaml` と `agent-instructions.md` は
+Custom GPT Actionsでの完全自動投稿を試みた際の設定一式として残して
+あります。GitHub API側の疎通・認証(PAT)は問題なく動作することを
+確認済みなので、今後ChatGPT側の挙動が改善された場合や、モデルの
+選択(Instant系など)・`x-openai-isConsequential: false` の指定などを
+工夫することで動く可能性はあります。試す場合はこれらのファイルを
+参照してください。
 
 ### 4. ローカルでプレビュー
 
