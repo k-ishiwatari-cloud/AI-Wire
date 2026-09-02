@@ -2,8 +2,8 @@ name: Auto-generate AI news posts
 
 on:
   schedule:
-    # 22:00 UTC = 07:00 JST
-    - cron: "0 22 * * *"
+    # 毎時5分に実行(ジャストのゼロ分は混雑しやすいため少しずらす)
+    - cron: "5 * * * *"
   workflow_dispatch: {}
 
 permissions:

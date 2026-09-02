@@ -8,6 +8,9 @@ on:
       - "site/**"
       - "scripts/**"
       - ".github/workflows/deploy.yml"
+  schedule:
+    # 新着の有無にかかわらず、毎時20分に再ビルドして「最終更新」を進める
+    - cron: "20 * * * *"
   workflow_dispatch: {}
 
 permissions:
