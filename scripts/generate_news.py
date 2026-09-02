@@ -164,6 +164,7 @@ def write_post(item: dict) -> Path:
         "source_url": item["source_url"],
         "tags": item["tags"],
         "summary": item["summary"],
+        "posted_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
     front_yaml = yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False).strip()
     body = item["body"] + "\n" if item["body"] else ""

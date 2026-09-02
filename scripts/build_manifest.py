@@ -44,6 +44,7 @@ def parse_post(path: Path) -> dict:
         "tags": list(meta.get("tags") or []),
         "summary": str(meta["summary"]),
         "body": body.strip(),
+        "posted_at": str(meta["posted_at"]) if meta.get("posted_at") else None,
     }
 
 

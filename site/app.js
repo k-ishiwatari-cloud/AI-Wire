@@ -105,7 +105,7 @@ function render() {
 
 function renderCard(post) {
   const card = document.createElement("article");
-  const isNew = isWithinHours(post.date, NEW_WINDOW_HOURS);
+  const isNew = post.posted_at && isWithinHours(post.posted_at, NEW_WINDOW_HOURS);
   card.className = "card" + (isNew ? " is-new" : "");
 
   const tagsHtml = (post.tags || [])
