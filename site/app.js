@@ -6,6 +6,7 @@
 
 const MANIFEST_URL = "data/manifest.json";
 const NEW_WINDOW_HOURS = 24;
+const TAG_ORDER = ["Release", "Agent", "Benchmark", "Framework", "OSS", "Policy", "Research", "Safety", "Other"];
 
 const feedEl = document.getElementById("feed");
 const filtersEl = document.getElementById("filters");
@@ -46,7 +47,16 @@ function renderFilters(posts) {
   const tagSet = new Set();
   posts.forEach((p) => (p.tags || []).forEach((t) => tagSet.add(t)));
 
-  [...tagSet].sort().forEach((tag) => {
+  const sortedTags = [...tagSet].sort((a, b) => {
+    const ai = TAG_ORDER.indexOf(a);
+    const bi = TAG_ORDER.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  sortedTags.forEach((tag) => {
     const btn = document.createElement("button");
     btn.className = "filter-chip";
     btn.type = "button";
