@@ -11,8 +11,9 @@
   --border: #262c38;
   --line: #2a3140;
   --text: #e7e9ee;
-  --text-muted: #a3acc0;
-  --text-faint: #7d8495;
+  --text-muted: #c9cede;
+  --text-faint: #b3b9cc;
+  --tag-color: #a3acc0;
   --accent: #4f7cff;
   --accent-soft: rgba(79, 124, 255, 0.14);
   --alert: #ffb347;
@@ -118,7 +119,7 @@ button { font-family: inherit; }
 .filter-chip {
   border: 1px solid var(--border);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--tag-color);
   font-family: var(--font-mono);
   font-size: 11px;
   padding: 6px 10px;
@@ -265,7 +266,7 @@ button { font-family: inherit; }
 .tag-pill {
   font-family: var(--font-mono);
   font-size: 10.5px;
-  color: var(--text-muted);
+  color: var(--tag-color);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 2px 7px;
