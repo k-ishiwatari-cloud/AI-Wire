@@ -134,6 +134,32 @@ pip install pyyaml
 python3 scripts/build_manifest.py
 ```
 
+## 完全自動投稿(news_bot.yml)
+
+ChatGPTへの手動コピペに代わり、OpenAI Responses API + Web検索
+(`gpt-5-mini`)を使って毎朝(07:00 JST)自動でニュースを収集・投稿する
+GitHub Actionsワークフローです。
+
+- `scripts/generate_news.py` が直近1〜3日のAIニュースを5〜10件
+  Web検索させ、`content/posts/` にMarkdownとして書き出す
+  (直近14日以内に投稿済みのURLはプロンプトに含めて重複を避ける)
+- `.github/workflows/news_bot.yml` が上記スクリプトを毎朝実行し、
+  生成されたファイルをそのままコミット・push する
+  (push契機で既存の `deploy.yml` が起動し、サイトへ反映される)
+- 手動実行も可能(Actionsタブから `workflow_dispatch`)
+
+### セットアップ
+
+リポジトリの **Settings > Secrets and variables > Actions** で
+`OPENAI_API_KEY` を登録してください。
+
+### 既知の注意点
+
+- Web検索を使っていても、AIが日付や固有名詞を誤る可能性はゼロではない
+  (ハルシネーション)。定期的に生成内容を確認することを推奨
+- `chatgpt-agent/` 配下の手動コピペ方式は、自動化が動かない場合の
+  フォールバックとして残してある
+
 ## 今後の拡張案(検討中)
 
 - 投稿を即時反映せず、Pull Requestを作らせてレビューを挟む運用

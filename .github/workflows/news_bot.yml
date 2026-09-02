@@ -1,0 +1,42 @@
+name: Auto-generate AI news posts
+
+on:
+  schedule:
+    # 22:00 UTC = 07:00 JST
+    - cron: "0 22 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Generate news posts
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python scripts/generate_news.py
+
+      - name: Commit and push new posts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/posts
+          if git diff --cached --quiet; then
+            echo "新しい記事はありませんでした。"
+          else
+            git commit -m "news: automated post $(date -u +%Y-%m-%d)"
+            git push
+          fi
