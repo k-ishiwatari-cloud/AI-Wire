@@ -33,6 +33,7 @@ FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
 REQUIRED_FIELDS = ["title", "date", "source_name", "source_url", "summary"]
 SLUG_RE = re.compile(r"^[a-z0-9\-]+$")
 PREFERRED_TAGS = ["Agent", "OSS", "Framework", "Benchmark", "Research", "Safety", "Policy"]
+BANNED_TAGS = {"test", "サンプル", "sample"}
 
 PROMPT_TEMPLATE = """直近1〜3日以内の、主要なAI関連ニュースを{count}件選んでください。
 それぞれについて、以下のJSONスキーマの配列を出力してください。
@@ -54,6 +55,7 @@ PROMPT_TEMPLATE = """直近1〜3日以内の、主要なAI関連ニュースを{
 条件:
 - 一次情報(公式ブログ、プレスリリース、大手報道)を優先し、真偽不明の噂は扱わない
 - tagsは {tags} を優先して使う。当てはまらない場合のみ新しいタグを追加してよい
+- "Test" や "サンプル" など、動作確認用・仮のタグやタイトルは使わないこと
 - source_url は実在する具体的なURLにすること(架空のURLを作らない)
 - 以下は直近{lookback}日間に既に投稿済みのニュースなので、同じ話題は選ばないこと:
 {existing}
@@ -130,6 +132,8 @@ def normalize_item(item: dict, index: int, seen_urls: set[str]) -> dict | None:
     if not SLUG_RE.match(slug):
         slug = slugify_fallback(item, index)
 
+    tags = [t for t in (item.get("tags") or []) if str(t).strip().lower() not in BANNED_TAGS]
+
     seen_urls.add(source_url)
     return {
         "title": str(item["title"]).strip(),
@@ -137,7 +141,7 @@ def normalize_item(item: dict, index: int, seen_urls: set[str]) -> dict | None:
         "source_name": str(item["source_name"]).strip(),
         "source_url": source_url,
         "slug": slug,
-        "tags": list(item.get("tags") or []),
+        "tags": tags,
         "summary": str(item["summary"]).strip(),
         "body": str(item.get("body") or "").strip(),
     }
