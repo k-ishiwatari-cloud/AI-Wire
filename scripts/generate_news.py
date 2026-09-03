@@ -185,11 +185,17 @@ def main() -> None:
         model=MODEL,
         input=build_prompt(),
         tools=[{"type": "web_search"}],
-        max_output_tokens=8000,
+        reasoning={"effort": "low"},
+        max_output_tokens=32000,
     )
     output_text = (resp.output_text or "").strip()
     if not output_text:
-        print("エラー: AIから空の応答でした。", file=sys.stderr)
+        status = getattr(resp, "status", "unknown")
+        incomplete_reason = getattr(getattr(resp, "incomplete_details", None), "reason", None)
+        print(
+            f"エラー: AIから空の応答でした。(status={status}, incomplete_reason={incomplete_reason})",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     try:
