@@ -6,7 +6,7 @@
 
 const MANIFEST_URL = "data/manifest.json";
 const NEW_WINDOW_HOURS = 24;
-const TAG_ORDER = ["Release", "Agent", "Benchmark", "Framework", "OSS", "Policy", "Research", "Safety", "Other"];
+const TAG_ORDER = ["Release", "Agent", "Benchmark", "Framework", "OSS", "Policy", "Research", "Safety", "China", "Other"];
 
 const feedEl = document.getElementById("feed");
 const filtersEl = document.getElementById("filters");
