@@ -35,7 +35,7 @@ SLUG_RE = re.compile(r"^[a-z0-9\-]+$")
 PREFERRED_TAGS = ["Release", "Agent", "OSS", "Framework", "Benchmark", "Research", "Safety", "Policy"]
 BANNED_TAGS = {"test", "サンプル", "sample"}
 
-PROMPT_TEMPLATE = """直近1〜3日以内の、主要なAI関連ニュースを{count}件選んでください。
+PROMPT_TEMPLATE = """直近0〜2日以内の、主要なAI関連ニュースを{count}件選んでください。
 それぞれについて、以下のJSONスキーマの配列を出力してください。
 説明や前置きは不要です。```json の中に配列だけを出力してください。
 
