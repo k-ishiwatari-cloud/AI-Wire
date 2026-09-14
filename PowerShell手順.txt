@@ -5,8 +5,8 @@ git status
 git diff                              # 中身も見るなら
 
 # 2. コミットする
-git add　　　　　　　　　　　　　　　#全部送る場合
-git add. <ファイル名>                  # 送るものだけ指定
+git add .　　　　　　　　　　　　　　　#全部送る場合
+git add <ファイル名>                  # 送るものだけ指定
 git commit -m "docs: 説明"
 
 # 3. リモートの最新を取得
