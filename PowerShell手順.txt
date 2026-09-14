@@ -1,0 +1,30 @@
+cd C:\Users\k-ishiwatari\Documents\AI-Wire
+
+# 1. 手元の変更を確認
+git status
+git diff                              # 中身も見るなら
+
+# 2. コミットする
+git add　　　　　　　　　　　　　　　#全部送る場合
+git add. <ファイル名>                  # 送るものだけ指定
+git commit -m "docs: 説明"
+
+# 3. リモートの最新を取得
+git fetch origin
+
+# 4. 差分を確認
+git log --oneline HEAD..origin/main   # リモートにだけあるもの
+git log --oneline origin/main..HEAD   # 手元にだけあるもの
+
+# 5. 取り込む
+git pull --rebase origin main
+
+# 6. 送る
+git push origin main
+
+# 7. 一致したか確認
+git status
+
+# 8. ファイルの競合が出た場合
+git add <競合した修正ファイル>
+git rebase --continue

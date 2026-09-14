@@ -32,7 +32,7 @@ LOOKBACK_DAYS = 14
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
 REQUIRED_FIELDS = ["title", "date", "source_name", "source_url", "summary"]
 SLUG_RE = re.compile(r"^[a-z0-9\-]+$")
-PREFERRED_TAGS = ["Release", "Agent", "OSS", "Framework", "Benchmark", "Research", "Safety", "Policy"]
+PREFERRED_TAGS = ["Release", "Agent", "OSS", "Framework", "Benchmark", "Research", "Safety", "Policy", "Japan"]
 BANNED_TAGS = {"test", "サンプル", "sample"}
 
 PROMPT_TEMPLATE = """直近0〜2日以内の、主要なAI関連ニュースを{count}件選んでください。
@@ -54,6 +54,11 @@ PROMPT_TEMPLATE = """直近0〜2日以内の、主要なAI関連ニュースを{
 
 条件:
 - 一次情報(公式ブログ、プレスリリース、大手報道)を優先し、真偽不明の噂は扱わない
+- 日本に関係する重要なAIニュースも収集対象にする。日本企業、日本の政府機関による
+  AIの製品・モデル・導入・政策・安全性に関する発表を優先して探す。経済産業省、総務省、デジタル庁、
+  企業・政府機関の公式発表を優先し、補助的に信頼できる日本語の大手報道を用いること。
+- 該当期間に掲載価値のある日本関連ニュースがある場合は、全体の中に少なくとも1件含める。
+  日本関連の記事には必ず "Japan" タグを付ける。日本の話題でない記事にこのタグを付けない。
 - tagsは {tags}, Other を優先して使う。新しいAIサービス・製品・モデルのリリース発表は
   "Release" を使う。上記のどれにも当てはまらない場合のみ "Other" を使う
   (それでも当てはまらない場合に限り、新しいタグを追加してもよい)

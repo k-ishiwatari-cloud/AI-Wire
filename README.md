@@ -141,7 +141,8 @@ ChatGPTへの手動コピペに代わり、OpenAI Responses API + Web検索
 GitHub Actionsワークフローです。
 
 - `scripts/generate_news.py` が直近1〜3日のAIニュースを5〜10件
-  Web検索させ、`content/posts/` にMarkdownとして書き出す
+  Web検索させ、`content/posts/` にMarkdownとして書き出す。日本企業、政府機関・自治体の
+  重要なAIニュースも対象とし、該当記事には `Japan` タグを付ける
   (直近14日以内に投稿済みのURLはプロンプトに含めて重複を避ける)
 - `.github/workflows/news_bot.yml` が上記スクリプトを毎時5分に実行し、
   新しい記事があればコミット・push する

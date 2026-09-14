@@ -26,7 +26,10 @@ summary: "2〜3文程度の要約。何が起きたか、なぜ重要かを簡�
 
 条件:
 - 一次情報(公式ブログ、プレスリリース、大手報道)を優先し、真偽不明の噂は扱わない
-- tagsは Agent, OSS, Framework, Benchmark, Research, Safety, Policy を
+- 日本企業、政府機関・自治体に関する重要なAIニュースも対象にする。
+  日本関連の記事には必ず Japan タグを付け、経済産業省、総務省、デジタル庁、
+  企業・政府機関・自治体の公式発表を優先する
+- tagsは Agent, OSS, Framework, Benchmark, Research, Safety, Policy, Japan を
   優先して使う。当てはまらない場合のみ新しいタグを追加してよい
 - source_url は実在する具体的なURLにすること(架空のURLを作らない)
 ```
