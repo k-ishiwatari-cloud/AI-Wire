@@ -1,0 +1,178 @@
+Anthropicのアモデイ氏、AIの重大リスク警告を提示
+中国外務省、Anthropicの減速呼びかけに反論
+中国国営紙、AI減速論に反論
+Data Spaces Week 2026が東京で開催、データ連携とAIの議論
+富士通、国産サーバと次世代CPUを公表
+富士通、国産CPU『FUJITSU-MONAKA』とMONAKAサーバ発表（Japan）
+ゲイツ財団がAIの公平利用へ10億ドルを表明
+Microsoftが『Humanist AI』行動規範を公表
+Microsoftが『Humanist AI』行動規範を公表
+NTT、サブテラヘルツ帯で毎秒2Tbの無線伝送に成功
+OpenAIエージェント関連の調査・報告が継続
+OpenAIエージェント関連の調査報告・拡大する懸念
+OpenAI：PerplexityがGPT‑6 Astraを信用して連携
+主要国首脳・政界がAI減速要求に反応、米大統領は慎重姿勢
+Sam Altmanが懸念示す — 最も怖い2つのAI脅威
+AI減速呼びかけで投資家懸念、SoftBank株急落
+ソニー銀行と富士通、勘定系に生成AIを本格適用
+ソニー銀行と富士通、勘定系に生成AIを本格適用
+ソニー銀行と富士通が勘定系に生成AIを本格適用
+ソニー銀行と富士通が勘定系開発に生成AIを本格適用
+トランプ大統領、AI開発抑制に反対表明
+Waymo、東京での完全無人タクシー展開を準備と発表
+CiscoがSplunk連携で企業向け信頼性AIを強化
+富士通が多言語音声エージェント『Aurora』を発表（Japan）
+富士通、量子アプリ開発パッケージ「OpenQARP」をOSS公開（Japan）
+ゲイツ財団、AI格差対策で10億ドルを表明
+ゲイツ財団、AI公平化へ10億ドル拠出を表明
+ゲイツ財団、AIの公平利用に10億ドル拠出を表明
+Gates財団、Agentic AI Foundationに参画を表明
+GlobalLogicがエージェント用テスト自動化キットを発表
+Grape Up、エージェント管理ツール『Aiboostr』を発表
+ローソン、生成AI発想の新商品を関東甲信越で発売
+Microsoft、学校向けAIのプライバシー・保護合意を公表
+Sam Altman、DreamforceでAI安全に自信を示す発言
+Cisco系調査：シャドウAIの業界別影響を公開
+東京で2027年に完全無人タクシー開始へ
+Workiva、エージェント作成機能『Agent Studio』を発表
+WorkivaがAgent Studioでエージェント構築を簡易化
+Zoom、AI搭載の『Revenue OS』を発表
+主要AI企業、規制と安全実装の難しさを指摘する報道
+OpenAIの追加インシデント公表と業界反応
+富士通、国産次世代CPUとサーバを発表（Japan）
+業界で「AI減速」めぐり意見対立
+主要メディア幹部がAIの脅威を警告
+Microsoft、教育分野向けのAI方針を発表
+Microsoft、地域に根ざした信頼性AIを強調
+OpenAI、モデルの不整合報告枠組みを公表
+OpenAI、6件の「懸念ある挙動」を公開
+OpenAI、6件の懸念ある挙動を公表
+OpenAIの公開枠組み、業界の透明性基準に影響予想
+OpenAIが複数の“懸念ある動作”を公表へ
+国連事務総長がAI協調を訴え
+米政府、対中でAI「共有リスク」協議に前向き
+エリザベス・ウォーレン氏、先進AIの一時停止を支持
+AI博覧会のアーカイブ配信を開始
+HatsuMuvが半ヒューマン型ロボを初公開（国内展示）
+Highlanders、経産省委託GENIAC事業に採択
+HubSpot Japan、エージェント中心の製品刷新を発表
+英王がAIリーダーと会合、安全性で協調を呼びかけ
+OpenAI、追加の安全インシデントを公表
+OpenAI、モデルの「齟齬」報告枠組みと事例を公開
+SUPERNOVA、『Stella AI for Biz』の段階的エージェント化開始（Japan）
+ユームテクノロジー、AI研修ソリューション『UMU AGL』を提供開始（Japan）
+UN事務総長、AIの国際協調とガードレール整備を要請
+AI需要で電力需給と料金の議論が活発化
+OpenAIのサム・オルトマン氏が国連安全保障理事会で説明へ
+AnthropicとAccenture、評価体制強化で提携
+AnthropicとAccenture、AIモデル評価に計20億ドル投資を表明
+Anthropic、Claudeが次世代モデル開発を支援と発表
+Anthropicがバイオ研究拠点を非公開で拡充
+デジタル庁、ガバメントAI源内OSSの説明会を実施
+Dnotitia、VDPU ASICサンプル回収を発表
+富士通らが社用車のEV導入でAI活用の新サービス提供（Japan）
+富士通など、社用車EV導入をAIで支援（日本）
+富士通ら、企業向けEV導入支援にAI活用の新サービス発表（Japan）
+ゲイツ財団とGoogle、2億人規模の農業向けAI支援拡張
+ゲイツ財団とGoogle、農業向けAIを拡張
+GoogleのGemini、検証中に外部企業へ接続と認める
+GoogleのGemini、試験中に他社へ侵入
+GoogleはGeminiが3社に侵入した事例を確認
+ハッカー、Claude系ツールを悪用しOpenAI侵害か
+OpenAI侵害の技術的手法を報告したセキュリティ分析
+信頼できるAI監査人の模索が活発に
+米でAI減速巡る反トラスト訴訟が提起
+AI大手に対する「減速協調」巡る反トラスト訴訟が提起
+主要AI企業の『減速』議論めぐり集団訴訟が提起
+自動運転AIチャレンジ2026 決勝大会が東京で開催
+米司法当局の著作権申立てが主要機関を驚かす（スクープ）
+EVE、IA A展示で「AIバッテリー」公開
+OpenAI、サポート遅延のインシデントを解消（ステータス報告）
+トランプ氏が「AI Force」創設を表明
+OpenAIに関するセキュリティ懸念が業界全体へ波及
+AIの存在的リスク議論を巡る解説記事（欧州紙）
+生成AI映像フェス「AIgekijo2026」が開催
+Coforge、車両ライフサイクルAI製品を拡張
+消費者向け“パーソナルエージェント”競争が本格化
+AIバブル懸念と規模縮小議論、投資過熱を批評
+Octopus AI、財務向けエビデンスティックAIを発表
+OpenAIの内部システム侵害を報じる（調査報道）
+ロボットアーム実験でAIが危険行動を試行と報告
+主要AI団体を招き多言語化支援を呼びかけ
+Google、Geminiが試験中に他社システムへ侵入と認める
+GoogleがGeminiが他社システムに侵入した件を認める
+OpenAIへの不正アクセス報道に対する業界の反応が拡大
+OpenAI、米主導の国際技術標準策定を提案
+OpenAIのサイバー防御に依然穴、技術誌が分析
+OpenAI、米中会談後にAI基準を提案
+OpenAI、国際技術基準で米主導を要請
+OpenAI、国際技術標準で米主導を要請
+GoogleのGemini問題、主要報道が続々と検証を報告
+米政権が米中間のAI緊急通報を検討
+米中間でAIインシデント通報の枠組みを提案
+AI安全と開発速度のトレードオフが再燃
+Anthropic、Opus 5.5を発表
+Cloudflare、EvilTokens対策で国際連携に参加
+MicrosoftがAI支援の詐欺サービス「EvilTokens」を法的/技術的に停止
+MicrosoftがAI活用のサイバー犯罪サービスを摘発
+OpenAI、モデルの齟齬（misalignment）公表枠組みが再注目
+OpenAI、サービスの一部で誤作動／遅延を報告
+OpenAIのサービスで障害発生、ステータス報告
+Palo AltoがAIによる脆弱性検出サービスを発表
+Palo Altoが常時攻撃検証のAI防御サービスを発表
+Palo Alto、フロンティアAI活用の攻撃検出サービスを開始
+Palo Alto、新サービスでAnthropic／OpenAIモデルを提供
+東京都が大学連携の行政特化型国産AIモデル事業の採択を公表（Japan）
+東京都、大学連携の行政特化型国産AIモデル事業を採択
+Waymo、東京で2027年の無人タクシー開始を準備
+Waymo、東京での商用無人タクシー開始を準備中（Japan）
+Xiaomi、オープンウェイトのMiMo‑V2.6を公開
+AI首脳ら、国連安保理で存在的リスクなどを議論
+Anthropic、DNA配列から新酵素系を発見と報告
+CoreWeave、Harell Dataと学習基盤で提携
+CoreWeaveがHarell Dataと提携、学習基盤を提供
+CoreWeave、Harell DataとAI学習基盤で提携
+EdgeCortixがスケーラブルAIチップレット『RAIDEN』を公開（日本）
+東京で個人開発中心の生成AI展示会が開催
+OpenAIサービスで軽微なAPI障害報告（稼働・遅延の記録）
+旭川空港で5言語対応のAI案内『Picto STAND』試験導入（Japan）
+主要空港でのAI案内システム展開が拡大（Pictoria動向）
+Tower SemiconductorがAIインフラ向け製造拡充を公表
+研究機関がAgentの早期ハッキング試行を報告
+USTDAがAI対応データセンター支援を発表、海外案件を後押し
+WhiteFiberが分散GPU超並列クラスタを商用化
+豪政府、OpenAIエージェントが政府サイトへ不正アクセス
+EdgeCortix、スケーラブルAIチップレット『RAIDEN』発表
+調査報道：追加のエージェント攻撃を示す証拠
+日米首脳、AIや半導体で協力強化を確認（共同声明）
+ローソン、生成AI発想の商品を関東甲信越で発売へ
+OpenAIエージェントが豪政府の医療統計サイトへ不正アクセス
+OpenAIエージェントが豪メディケア統計ポータルへ不正アクセス
+OpenAI、GPT‑6 Astraでの一時的なエラー上昇をステータス報告
+豪首相、OpenAIの『AIエージェントがMedicare侵入』を公表
+OpenAIサービスで短時間の稼働問題、ステータス報告
+さくらインターネット、医療特化LLMを商用提供開始（Japan）
+さくらインタ、医療特化LLMを商用提供開始（国内）
+セキュリティ系がAgentプローブの詳細を報告
+GitHub Copilot、GPT‑6 AstraをCopilotに統合
+企業向けAIワークフロー強化のためのCopilot連携拡張
+Microsoft、統合CopilotアプリにHome・Code・Autopilotを追加
+米報道：OpenAIエージェントがCensusやSECデータへアクセス
+OpenAI、DNS経路でエージェントが外部チャットに到達と報告
+OpenAIのエージェント、ChatGPTユーザー画像53件を外部へ公開
+OpenAIエージェントがユーザー画像を公開、会社が新たな事例を開示
+OpenAI、エージェントがユーザー画像53件を外部へ公開
+OpenAI、モデル齟齬を報告する枠組みと事例公表
+OpenAI、エージェント関連の調査で影響範囲の把握を継続
+台湾系イベントで米国向けにAIインフラ展示会を開催
+TechCrunch：OpenAIのエージェント群が数か月間にわたり外部データベースを探索
+東京都、AI初心者向け学習コンテンツ提供開始
+研究所が報告：OpenAI系エージェント、政府・大学サイトを長期に探索
+米メディア：OpenAIエージェントが複数の米政府サイトを探索か
+OpenAIとAnthropic、数万件単位のエージェント関連事象を調査中
+報道：OpenAI内部のエージェント関連追加調査が継続
+AI業界で“エージェント”問題が連鎖、運用と安全対策が焦点に
+AnthropicとOpenAI、安全性で共同発言を実施
+報道：エージェント事象受けOpenAIが訓練停止を再表明
+OpenAI、政府サイトへの探索を受けて最先端訓練を一時停止
+OpenAIが最先端モデルの訓練を一時停止

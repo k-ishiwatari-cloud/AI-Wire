@@ -15,12 +15,22 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Callable
 from urllib.parse import urlparse
 
 import yaml
 from openai import OpenAI
+
+from news_validation import (
+    UrlCheck,
+    check_url,
+    extract_source_urls,
+    find_similar_title,
+    is_cited,
+    normalize_url,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 POSTS_DIR = ROOT / "content" / "posts"
@@ -69,30 +79,41 @@ PROMPT_TEMPLATE = """直近0〜2日以内の、主要なAI関連ニュースを{
 """
 
 
-def load_existing_source_urls() -> list[str]:
+def load_recent_posts_meta() -> list[dict]:
+    """直近 LOOKBACK_DAYS 日間(日付不明を含む)の既存記事の frontmatter。"""
     if not POSTS_DIR.exists():
         return []
     cutoff = datetime.now(timezone.utc).date() - timedelta(days=LOOKBACK_DAYS)
-    urls: list[str] = []
+    metas: list[dict] = []
     for path in sorted(POSTS_DIR.glob("*.md")):
-        text = path.read_text(encoding="utf-8")
-        match = FRONTMATTER_RE.match(text)
+        match = FRONTMATTER_RE.match(path.read_text(encoding="utf-8"))
         if not match:
             continue
         meta = yaml.safe_load(match.group(1)) or {}
-        date_str = str(meta.get("date", ""))
         try:
-            post_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            post_date = datetime.strptime(str(meta.get("date", "")), "%Y-%m-%d").date()
         except ValueError:
             post_date = None
         if post_date is None or post_date >= cutoff:
-            title = meta.get("title", "")
-            url = meta.get("source_url", "")
-            if url:
-                urls.append(url)
-            if title or url:
-                urls.append(f"- {title} ({url})")
+            metas.append(meta)
+    return metas
+
+
+def load_existing_source_urls() -> list[str]:
+    urls: list[str] = []
+    for meta in load_recent_posts_meta():
+        title = meta.get("title", "")
+        url = meta.get("source_url", "")
+        if url:
+            urls.append(url)
+        if title or url:
+            urls.append(f"- {title} ({url})")
     return urls
+
+
+def load_recent_titles() -> list[str]:
+    """直近 LOOKBACK_DAYS 日間の既存記事タイトル(タイトル類似度による重複判定用)。"""
+    return [str(meta["title"]) for meta in load_recent_posts_meta() if meta.get("title")]
 
 
 def build_prompt() -> str:
@@ -109,7 +130,10 @@ def build_prompt() -> str:
 def extract_json_array(text: str) -> list[dict]:
     fenced = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
     raw = fenced.group(1) if fenced else text[text.find("["): text.rfind("]") + 1]
-    return json.loads(raw)
+    items = json.loads(raw)
+    if not isinstance(items, list):
+        raise ValueError("トップレベルがJSON配列ではありません")
+    return items
 
 
 def slugify_fallback(item: dict, index: int) -> str:
@@ -120,28 +144,44 @@ def slugify_fallback(item: dict, index: int) -> str:
     return f"article-{index}"
 
 
-def normalize_item(item: dict, index: int, seen_urls: set[str]) -> dict | None:
+def _valid_date(value: object) -> str:
+    text = str(value).strip()
+    try:
+        return date.fromisoformat(text).isoformat() if re.match(r"^\d{4}-\d{2}-\d{2}$", text) else _today()
+    except ValueError:
+        return _today()
+
+
+def _today() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def normalize_item(item: object, index: int, seen_urls: set[str]) -> dict | None:
+    """seen_urls は normalize_url 済みの集合。登録は採用確定後に呼び出し側が行う。"""
+    if not isinstance(item, dict):
+        print(f"::warning:: {index}件目: オブジェクトではないためスキップ ({item!r})", file=sys.stderr)
+        return None
+
     missing = [k for k in REQUIRED_FIELDS if not item.get(k)]
     if missing:
         print(f"::warning:: {index}件目: 必須フィールド不足 {missing} のためスキップ", file=sys.stderr)
         return None
 
     source_url = str(item["source_url"]).strip()
-    if source_url in seen_urls:
+    if normalize_url(source_url) in seen_urls:
         print(f"::warning:: {index}件目: source_urlが重複のためスキップ ({source_url})", file=sys.stderr)
         return None
 
-    date_str = str(item["date"]).strip()
-    if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_str = _valid_date(item["date"])
 
     slug = str(item.get("slug", "")).strip().lower()
     if not SLUG_RE.match(slug):
         slug = slugify_fallback(item, index)
 
-    tags = [t for t in (item.get("tags") or []) if str(t).strip().lower() not in BANNED_TAGS]
+    raw_tags = item.get("tags")
+    tags = [str(t).strip() for t in (raw_tags if isinstance(raw_tags, list) else [])
+            if str(t).strip() and str(t).strip().lower() not in BANNED_TAGS]
 
-    seen_urls.add(source_url)
     return {
         "title": str(item["title"]).strip(),
         "date": date_str,
@@ -152,6 +192,62 @@ def normalize_item(item: dict, index: int, seen_urls: set[str]) -> dict | None:
         "summary": str(item["summary"]).strip(),
         "body": str(item.get("body") or "").strip(),
     }
+
+
+def select_items(
+    raw_items: list[object],
+    existing_urls: set[str],
+    existing_titles: list[str],
+    sources: set[str],
+    url_checker: Callable[[str], UrlCheck],
+) -> list[dict]:
+    """AIが返した候補から、投稿してよい記事だけを選ぶ。
+
+    判定順(安価なものから): 必須項目・URL重複 → タイトル類似 → 引用元照合 → 到達確認。
+    sources が空(web_search の参照元が取れない)場合は、捏造URLを防げないため全件不採用にする。
+    """
+    if not sources:
+        print("::warning:: web_search の参照元URLが取得できなかったため、今回は投稿しません", file=sys.stderr)
+        return []
+
+    seen_urls = {normalize_url(u) for u in existing_urls if u}
+    accepted_titles = list(existing_titles)
+    selected: list[dict] = []
+    for i, raw_item in enumerate(raw_items, start=1):
+        item = normalize_item(raw_item, i, seen_urls)
+        if item is None:
+            continue
+
+        similar = find_similar_title(item["title"], accepted_titles)
+        if similar:
+            print(
+                f"::warning:: {i}件目: 既存記事「{similar[0]}」とタイトルが類似"
+                f"(類似度{similar[1]:.2f})のためスキップ ({item['title']})",
+                file=sys.stderr,
+            )
+            continue
+
+        if not is_cited(item["source_url"], sources):
+            print(
+                f"::warning:: {i}件目: source_urlがweb_searchの参照先に含まれないためスキップ ({item['source_url']})",
+                file=sys.stderr,
+            )
+            continue
+
+        check = url_checker(item["source_url"])
+        if not check.ok:
+            print(
+                f"::warning:: {i}件目: source_urlに到達できないためスキップ [{check.reason}] ({item['source_url']})",
+                file=sys.stderr,
+            )
+            continue
+        if check.reason:
+            print(f"{i}件目: 到達確認は判定不能でしたが採用します [{check.reason}] ({item['source_url']})")
+
+        seen_urls.add(normalize_url(item["source_url"]))
+        accepted_titles.append(item["title"])
+        selected.append(item)
+    return selected
 
 
 def write_post(item: dict) -> Path:
@@ -190,6 +286,8 @@ def main() -> None:
         model=MODEL,
         input=build_prompt(),
         tools=[{"type": "web_search"}],
+        tool_choice="required",
+        include=["web_search_call.action.sources"],
         reasoning={"effort": "low"},
         max_output_tokens=32000,
     )
@@ -216,11 +314,16 @@ def main() -> None:
         if FRONTMATTER_RE.match(p.read_text(encoding="utf-8"))
     }
 
+    items = select_items(
+        raw_items,
+        existing_urls=existing_urls,
+        existing_titles=load_recent_titles(),
+        sources=extract_source_urls(resp),
+        url_checker=check_url,
+    )
+
     written: list[Path] = []
-    for i, raw_item in enumerate(raw_items, start=1):
-        item = normalize_item(raw_item, i, existing_urls)
-        if item is None:
-            continue
+    for item in items:
         path = write_post(item)
         written.append(path)
         print(f"作成: {path.relative_to(ROOT)} ({item['title']})")
