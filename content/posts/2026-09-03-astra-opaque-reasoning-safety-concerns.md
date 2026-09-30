@@ -1,8 +1,8 @@
 ---
 title: 研究者・安全専門家、Astraの設計に懸念
 date: '2026-09-03'
-source_name: Fortune / TechCrunch
-source_url: https://fortune.com/2026/09/03/openai-astra-safety-concerns-opaque-reasoning/
+source_name: Fortune
+source_url: https://fortune.com/2026/09/03/reports-openais-astra-model-uses-a-new-more-efficient-ai-architecture-alarms-ai-safety-experts-who-worry-the-method-makes-models-harder-to-control/
 tags:
 - Safety
 - Research

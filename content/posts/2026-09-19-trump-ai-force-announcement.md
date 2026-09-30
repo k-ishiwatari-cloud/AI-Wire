@@ -2,7 +2,7 @@
 title: トランプ氏が「AI Force」創設を表明
 date: '2026-09-19'
 source_name: ITmedia NEWS
-source_url: https://www.itmedia.co.jp/news/articles/2609/21/news166.html
+source_url: https://www.itmedia.co.jp/news/article/2609/21/2000001666/
 tags:
 - Policy
 - Other

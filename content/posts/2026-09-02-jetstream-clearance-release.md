@@ -1,8 +1,8 @@
 ---
 title: JetStreamがAI行動審査エンジン「Clearance」を発表
 date: '2026-09-02'
-source_name: Newswire（JetStream Security プレスリリース）
-source_url: https://www.newswire.com/news/jetstream-announces-clearance-an-ai-zero-trust-reasoning-engine-27234567
+source_name: Yahoo Finance（JetStream Security プレスリリース）
+source_url: https://finance.yahoo.com/technology/ai/articles/jetstream-announces-clearance-ai-zero-170000815.html
 tags:
 - Release
 - Safety

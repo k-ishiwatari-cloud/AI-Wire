@@ -1,8 +1,8 @@
 ---
 title: RIZAP、生成AIへ顧客情報を誤送信し謝罪
 date: '2026-09-11'
-source_name: オリコンニュース（livedoor経由）
-source_url: https://news.livedoor.com/article/detail/XXXXXXX/
+source_name: ITmedia NEWS
+source_url: https://www.itmedia.co.jp/news/article/2609/04/2000001161/
 tags:
 - Safety
 - Policy

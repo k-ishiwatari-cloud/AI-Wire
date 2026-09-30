@@ -1,8 +1,8 @@
 ---
 title: Anthropic、モデル悪用を阻止と脅威報告を公表
 date: '2026-09-10'
-source_name: Anthropic / 報道（AP, NYT等）
-source_url: https://www.anthropic.com/threat-intel-report-september-2026
+source_name: Anthropic
+source_url: https://www.anthropic.com/threat-intelligence-report-september-2026
 tags:
 - Safety
 - Research

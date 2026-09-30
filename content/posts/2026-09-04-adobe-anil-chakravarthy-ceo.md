@@ -1,8 +1,8 @@
 ---
 title: Adobe、新CEOにAnil Chakravarthyを指名
 date: '2026-09-04'
-source_name: CNBC
-source_url: https://www.cnbc.com/2026/09/04/adobe-anil-chakravarthy-named-ceo-shantanu-narayen-to-be-executive-chair.html
+source_name: Adobe（プレスリリース）
+source_url: https://news.adobe.com/news/2026/09/adobe-announces-anil-chakravarthy-to-become-president-and-ceo
 tags:
 - Other
 - Release

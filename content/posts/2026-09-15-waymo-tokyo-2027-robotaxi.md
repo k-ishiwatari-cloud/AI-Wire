@@ -2,7 +2,7 @@
 title: 東京で2027年に完全無人タクシー開始へ
 date: '2026-09-15'
 source_name: Waymo ブログ
-source_url: https://waymo.com/blog/2026/09/opening-our-doors-to-tokyo-riders-in-2027-with-nihon-kotsu-go/
+source_url: https://waymo.com/blog/2026/09/opening-tokyo-in-2027-with-nihon-kotsu-go/
 tags:
 - Release
 - Japan

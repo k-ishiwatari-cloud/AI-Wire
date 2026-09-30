@@ -2,8 +2,7 @@
 title: OpenAI、オンラインストレージ拡張を発表
 date: '2026-09-11'
 source_name: OpenAI Blog
-source_url: https://openai.com/ja-JP/news/ (see 'Rapidly scaling online storage to
-  serve over 1 billion ChatGPT users' entry)
+source_url: https://openai.com/index/scaling-storage-one-billion-users-part-one/
 tags:
 - Release
 - Other

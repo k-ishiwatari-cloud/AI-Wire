@@ -2,7 +2,7 @@
 title: Palo Altoが常時攻撃検証のAI防御サービスを発表
 date: '2026-09-22'
 source_name: Palo Alto Networks（プレスリリース）
-source_url: https://www.paloaltonetworks.com/company/press/2026/palo-alto-networks-delivers-anthropics-mythos-and-openais-gpt-5-6-to-customers-with-unit-42-continuous-frontier-ai-defense
+source_url: https://www.paloaltonetworks.com/company/press/2026/palo-alto-networks-delivers-anthropic-s-mythos-and-openai-s-gpt-5-6-to-customers-with-unit-42-continuous-frontier-ai-defense
 tags:
 - Release
 - Agent

@@ -1,8 +1,8 @@
 ---
 title: 主要新聞社がOpenAI等を相次ぎ提訴
 date: '2026-09-04'
-source_name: The Seattle Times (報道案内)
-source_url: https://www.seattletimes.com/about/legal-notices/
+source_name: TechCrunch
+source_url: https://techcrunch.com/2026/09/05/seattle-times-and-newsday-are-the-latest-publications-to-sue-openai-and-microsoft/
 tags:
 - Policy
 - Other
