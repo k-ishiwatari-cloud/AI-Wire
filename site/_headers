@@ -1,0 +1,5 @@
+# Cloudflare Pages のレスポンスヘッダ設定(このファイル自体は公開されない)
+
+# 新着記事がすぐ反映されるよう、manifest.json はキャッシュを再利用する前に毎回再検証させる
+/data/manifest.json
+  Cache-Control: public, max-age=0, no-cache
