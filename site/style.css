@@ -41,7 +41,8 @@ button { font-family: inherit; }
 
 .app {
   display: grid;
-  grid-template-columns: 272px 1fr;
+  /* minmax(0, …): 長い URL などで列が押し広げられ、タグごとにカード幅が変わるのを防ぐ */
+  grid-template-columns: 272px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -232,6 +233,7 @@ button { font-family: inherit; }
   border-radius: 10px;
   padding: 20px 22px;
   margin-bottom: 14px;
+  overflow-wrap: anywhere;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .card:hover { background: var(--panel-hover); border-color: var(--accent); }
@@ -318,7 +320,7 @@ button { font-family: inherit; }
 /* ---------------- Responsive ---------------- */
 
 @media (max-width: 860px) {
-  .app { grid-template-columns: 1fr; }
+  .app { grid-template-columns: minmax(0, 1fr); }
   .rail {
     position: relative;
     height: auto;
