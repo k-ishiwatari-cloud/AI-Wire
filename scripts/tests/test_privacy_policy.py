@@ -89,3 +89,11 @@ def test_explains_how_operator_details_are_provided():
 def test_table_headers_have_scope():
     html = _html()
     assert html.count('<th scope="col">') == 3
+
+
+def test_explains_consent_mode_behavior_for_analytics():
+    """同意モード(advanced): 同意がない場合も Cookie を使わない計測信号が送られうることを説明する。"""
+    html = _html()
+    ga = html[html.index("Google Analytics"):html.index("5. 利用者情報の外部送信")]
+    assert "欧州経済領域" in ga
+    assert "Cookie を使用しない" in ga
