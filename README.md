@@ -28,6 +28,7 @@ ai-news-site/
 │   ├── app.js
 │   ├── _headers                    # レスポンスヘッダ設定(公開はされない)
 │   └── data/manifest.json          # ビルド時に自動生成(手動編集不要)
+├── aiwire-icons/                   # ロゴ・ファビコンの元データ(公開用は site/ にコピー済み)
 ├── chatgpt-agent/
 │   ├── draft-prompt-template.md    # 通常のChatGPTに貼り付ける記事作成プロンプト
 │   ├── openapi-github-actions.yaml # (参考)Custom GPT Actions用スキーマ
