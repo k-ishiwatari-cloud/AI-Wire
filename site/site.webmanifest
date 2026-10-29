@@ -1,0 +1,14 @@
+{
+  "name": "AI WIRE",
+  "short_name": "AI WIRE",
+  "description": "AI ニュース・ダイジェスト",
+  "lang": "ja",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#12151b",
+  "theme_color": "#12151b",
+  "icons": [
+    { "src": "/icons/app-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/app-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

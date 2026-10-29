@@ -65,6 +65,12 @@ button { font-family: inherit; }
   letter-spacing: 0.02em;
 }
 .wordmark span { color: var(--accent); }
+.wordmark-mark {
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+  vertical-align: -6px;
+}
 
 .tagline {
   margin: 8px 0 28px;
