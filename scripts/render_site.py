@@ -21,6 +21,7 @@ TAG_ORDER = ["Release", "Agent", "Benchmark", "Framework", "OSS", "Policy", "Res
 WEEKDAYS = "月火水木金土日"
 JST = timezone(timedelta(hours=9))
 POST_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+SUMMARY_PREVIEW_CHARS = 15  # トップのカードに出す要約の文字数
 
 # 記事ページの <head>。index.html / privacy.html と同じ解析・広告・アイコンを読み込む(パスは絶対パス)。
 HEAD_ASSETS = """\
@@ -63,10 +64,22 @@ def sort_tags(tags) -> list[str]:
     return sorted(set(tags), key=key)
 
 
-def render_card(post: dict, heading: str = "h3", link: bool = True) -> str:
+def summary_preview(summary: str) -> str:
+    """トップのカード用に要約の先頭だけを残す。例: 一二三四五六七八九十一二三四五…"""
+    summary = summary.strip()
+    if len(summary) <= SUMMARY_PREVIEW_CHARS:
+        return summary
+    return summary[:SUMMARY_PREVIEW_CHARS].rstrip() + "…"
+
+
+def render_card(post: dict, full: bool = False) -> str:
+    """full=False はトップの一覧用(タイトルを記事ページへのリンクにし、要約は先頭だけ)。
+    full=True は記事ページ用(要約の全文・本文・出典リンクを出す)。"""
+    heading = "h1" if full else "h3"
     title = escape(post["title"])
-    if link:
+    if not full:
         title = f'<a href="{post_path(post)}">{title}</a>'
+    summary = post["summary"] if full else summary_preview(post["summary"])
 
     attrs = f' data-tags="{escape(json.dumps(post["tags"], ensure_ascii=False))}"'
     if post.get("posted_at"):
@@ -82,15 +95,16 @@ def render_card(post: dict, heading: str = "h3", link: bool = True) -> str:
     ]
     if tags_html:
         parts.append(f'  <div class="card-tags">{tags_html}</div>')
-    parts.append(f'  <p class="card-summary">{escape(post["summary"])}</p>')
-    if post.get("body"):
-        parts.append(f'  <div class="card-body">{escape(post["body"])}</div>')
-    parts += [
-        f'  <a class="card-source" href="{escape(post["source_url"])}" target="_blank" rel="noopener noreferrer">',
-        f'    {escape(post["source_name"])} で読む →',
-        "  </a>",
-        "</article>",
-    ]
+    parts.append(f'  <p class="card-summary">{escape(summary)}</p>')
+    if full:
+        if post.get("body"):
+            parts.append(f'  <div class="card-body">{escape(post["body"])}</div>')
+        parts += [
+            f'  <a class="card-source" href="{escape(post["source_url"])}" target="_blank" rel="noopener noreferrer">',
+            f'    {escape(post["source_name"])} で読む →',
+            "  </a>",
+        ]
+    parts.append("</article>")
     return "\n".join(parts)
 
 
@@ -159,7 +173,7 @@ def render_post_page(post: dict) -> str:
   <p class="doc-back"><a href="/">← AI WIRE トップへ戻る</a></p>
 
 <div class="date-block is-last" style="--cards: 1">
-{_date_group(post["date"], [render_card(post, heading="h1", link=False)])}
+{_date_group(post["date"], [render_card(post, full=True)])}
 </div>
 
   <footer class="site-footer">

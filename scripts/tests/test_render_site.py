@@ -49,14 +49,39 @@ def test_tags_follow_fixed_order_then_alphabetical():
 
 # ---------------- カード ----------------
 
-def test_card_keeps_previous_markup_and_links_title_to_post_page():
-    html = render_site.render_card(_post())
+LONG_SUMMARY = "一二三四五六七八九十一二三四五六七八九十。"  # 21 文字
+
+
+def test_preview_card_links_title_and_shows_only_head_of_summary():
+    """トップのカード: タイトルは記事ページへのリンク。要約は先頭 15 文字 + 「…」。本文と出典リンクは出さない。"""
+    html = render_site.render_card(_post(summary=LONG_SUMMARY))
     assert html.startswith('<article class="card"')
     assert '<div class="card-top">' in html and "<span>2026-10-29</span>" in html
     assert ('<h3 class="card-title"><a href="/posts/2026-10-29-sample-news/">'
             "サンプル &lt;記事&gt; &amp; タイトル</a></h3>") in html
     assert '<span class="tag-pill">Release</span><span class="tag-pill">Japan</span>' in html
-    assert '<p class="card-summary">要約の文章。</p>' in html
+    assert '<p class="card-summary">一二三四五六七八九十一二三四五…</p>' in html
+    assert "card-body" not in html
+    assert "card-source" not in html and "example.com" not in html
+
+
+def test_preview_keeps_short_summary_without_ellipsis():
+    assert render_site.summary_preview("短い要約。") == "短い要約。"
+    assert render_site.summary_preview("あ" * 15) == "あ" * 15
+    assert render_site.summary_preview("あ" * 16) == "あ" * 15 + "…"
+
+
+def test_preview_escapes_after_truncation():
+    """15 文字で切ってからエスケープする(&amp; などの途中で切らない)。"""
+    html = render_site.render_card(_post(summary="A&B" * 10))
+    assert '<p class="card-summary">A&amp;BA&amp;BA&amp;BA&amp;BA&amp;B…</p>' in html
+
+
+def test_full_card_on_post_page_shows_everything_without_self_link():
+    html = render_site.render_card(_post(summary=LONG_SUMMARY), full=True)
+    assert '<h1 class="card-title">サンプル &lt;記事&gt; &amp; タイトル</h1>' in html
+    assert "/posts/" not in html
+    assert f'<p class="card-summary">{LONG_SUMMARY}</p>' in html
     assert '<div class="card-body">本文1行目\n本文2行目</div>' in html
     assert ('<a class="card-source" href="https://example.com/news?a=1&amp;b=2" '
             'target="_blank" rel="noopener noreferrer">') in html
@@ -71,16 +96,10 @@ def test_card_carries_data_for_client_side_filter_and_new_badge():
 
 
 def test_card_omits_optional_parts():
-    html = render_site.render_card(_post(tags=[], body="", posted_at=None))
+    html = render_site.render_card(_post(tags=[], body="", posted_at=None), full=True)
     assert "card-tags" not in html
     assert "card-body" not in html
     assert "data-posted-at" not in html
-
-
-def test_card_on_post_page_uses_h1_without_self_link():
-    html = render_site.render_card(_post(), heading="h1", link=False)
-    assert '<h1 class="card-title">サンプル &lt;記事&gt; &amp; タイトル</h1>' in html
-    assert "/posts/" not in html
 
 
 # ---------------- 一覧 ----------------
@@ -173,6 +192,7 @@ def test_post_page_shows_the_card_in_a_date_group():
     assert '<div class="date-block is-last" style="--cards: 1">\n<section class="date-group">' in html  # 縦線はカードで止める
     assert '<h2 class="date-heading">2026年10月29日(木)</h2>' in html
     assert '<h1 class="card-title">' in html
+    assert 'class="card-source"' in html and '<div class="card-body">' in html  # 出典リンクと本文は記事ページにだけ出す
 
 
 # ---------------- sitemap ----------------
@@ -248,3 +268,16 @@ def test_app_js_no_longer_renders_cards():
     assert "data-tags" in js or "dataset.tags" in js
     assert 'closest(".date-block")' in js  # 絞り込みで空になった日付は、描画省略用の外枠ごと隠す
     assert '"is-last"' in js  # 表示中の最後のグループの縦線を消す
+
+
+def test_preview_trims_space_at_cut_point():
+    assert render_site.summary_preview("あいうえおかきくけこさしすせ そたちつて") == "あいうえおかきくけこさしすせ…"
+
+
+def test_index_hides_body_and_source_which_stay_on_post_page():
+    post = _post(summary=LONG_SUMMARY)
+    index = render_site.render_index((SITE / "index.html").read_text(encoding="utf-8"), [post], "2026-10-29T11:05:00Z")
+    page = render_site.render_post_page(post)
+    for text in ("本文1行目", "Example News で読む →", LONG_SUMMARY):
+        assert text not in index, text
+        assert text in page, text

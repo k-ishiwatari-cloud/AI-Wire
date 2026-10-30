@@ -79,10 +79,15 @@ def test_date_block_comment_wording():
 
 def test_last_timeline_line_is_hidden_on_last_visible_block():
     """絞り込みで最後に表示されるグループが変わるため、:last-child ではなく is-last クラスで縦線を消す。"""
-    assert ":last-child" not in CSS
+    assert ".date-block:last-child" not in CSS and ".date-group:last-child" not in CSS
     assert _declared(_top_level(), ".date-block.is-last .date-group", "border-left-color") == "transparent"
 
 
 def test_print_renders_every_date_block():
     printing = _media_block("@media print")
     assert _declared(printing, ".date-block", "content-visibility") == "visible"
+
+
+def test_card_has_no_extra_space_after_last_element():
+    """トップのカードは要約で終わるため、最後の要素の下マージンでカードの下の余白が広がらないようにする。"""
+    assert _declared(_top_level(), ".card > :last-child", "margin-bottom") == "0"
