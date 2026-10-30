@@ -7,7 +7,6 @@ tags:
 - Release
 - Other
 summary: OpenAIがChatGPT利用拡大に対応するためのオンラインストレージ拡張計画を公表した。大規模ユーザー基盤に対応するインフラ投資が強化される。
-  ([openai.com](https://openai.com/ja-JP/news/?utm_source=openai))
 posted_at: '2026-09-13T00:51:03.836323Z'
 ---
 

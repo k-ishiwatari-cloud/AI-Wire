@@ -45,6 +45,15 @@ SLUG_RE = re.compile(r"^[a-z0-9\-]+$")
 PREFERRED_TAGS = ["Release", "Agent", "OSS", "Framework", "Benchmark", "Research", "Safety", "Policy", "Japan"]
 BANNED_TAGS = {"test", "サンプル", "sample"}
 
+# web_search の出典として本文に混入する Markdown リンク。例: " ([openai.com](https://...?utm_source=openai))"
+# リンク先の部分。URL 内の括弧は 1 段まで許し(例: https://en.wikipedia.org/wiki/A_(b))、
+# リンクタイトル(例: (https://example.com "title"))にも対応する
+_LINK_TARGET = r'\(https?://(?:[^()\s]|\([^()\s]*\))+(?:\s+"[^"\n]*")?\)'
+# 表示文字列がドメイン名の括弧付きリンクだけを出典とみなし、丸ごと消す
+CITATION_RE = re.compile(r"\s*\(\[[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\]" + _LINK_TARGET + r"\)")
+# それ以外のリンクは表示文字列だけ残す
+MARKDOWN_LINK_RE = re.compile(r"\[([^\]\n]*)\]" + _LINK_TARGET)
+
 PROMPT_TEMPLATE = """直近0〜2日以内の、主要なAI関連ニュースを{count}件選んでください。
 それぞれについて、以下のJSONスキーマの配列を出力してください。
 説明や前置きは不要です。```json の中に配列だけを出力してください。
@@ -156,6 +165,11 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+def strip_citations(text: str) -> str:
+    """出典の Markdown リンクを取り除く。括弧で囲まれた出典は丸ごと消し、文中のリンクは表示文字列だけ残す。"""
+    return MARKDOWN_LINK_RE.sub(lambda m: m.group(1), CITATION_RE.sub("", text)).strip()
+
+
 def normalize_item(item: object, index: int, seen_urls: set[str]) -> dict | None:
     """seen_urls は normalize_url 済みの集合。登録は採用確定後に呼び出し側が行う。"""
     if not isinstance(item, dict):
@@ -165,6 +179,11 @@ def normalize_item(item: object, index: int, seen_urls: set[str]) -> dict | None
     missing = [k for k in REQUIRED_FIELDS if not item.get(k)]
     if missing:
         print(f"::warning:: {index}件目: 必須フィールド不足 {missing} のためスキップ", file=sys.stderr)
+        return None
+
+    summary = strip_citations(str(item["summary"]))
+    if not summary:
+        print(f"::warning:: {index}件目: 出典リンクを除くと要約が空になるためスキップ", file=sys.stderr)
         return None
 
     source_url = str(item["source_url"]).strip()
@@ -189,8 +208,8 @@ def normalize_item(item: object, index: int, seen_urls: set[str]) -> dict | None
         "source_url": source_url,
         "slug": slug,
         "tags": tags,
-        "summary": str(item["summary"]).strip(),
-        "body": str(item.get("body") or "").strip(),
+        "summary": summary,
+        "body": strip_citations(str(item.get("body") or "")),
     }
 
 

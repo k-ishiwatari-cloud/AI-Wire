@@ -5,3 +5,6 @@ __pycache__/
 scripts/.github_token
 PowerShell手順
 HANDOFF_TO_CODEX
+# ビルド時に scripts/render_site.py が生成する
+site/posts/
+site/sitemap.xml

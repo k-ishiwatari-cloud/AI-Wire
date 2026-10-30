@@ -9,4 +9,4 @@ summary: 複数の地域でAIスタートアップのシード〜シリーズ初
 posted_at: '2026-09-05T08:58:27.817343Z'
 ---
 
-掲載例としてOppex AIやSwiftaskなどのシード/シリーズA案件が報じられている。地域別の資金流入や分野の多様化が観察される。 ([fundup.ai](https://fundup.ai/recently-funded-startups?utm_source=openai))
+掲載例としてOppex AIやSwiftaskなどのシード/シリーズA案件が報じられている。地域別の資金流入や分野の多様化が観察される。

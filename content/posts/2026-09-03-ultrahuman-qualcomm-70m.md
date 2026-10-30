@@ -9,4 +9,4 @@ summary: ウェアラブルとヘルスAIのUltrahumanがQualcomm Venturesらの
 posted_at: '2026-09-05T08:58:27.815970Z'
 ---
 
-発表によれば、資金はオンデバイス推論や製品開発、海外展開に投じられる。Qualcommとの連携はチップ側最適化を進める狙いがある。 ([androidcentral.com](https://www.androidcentral.com/wearables/ultrahuman/qualcomm-invests-in-ultrahuman-bets-on-the-future-of-human-computing-for-our-health?utm_source=openai))
+発表によれば、資金はオンデバイス推論や製品開発、海外展開に投じられる。Qualcommとの連携はチップ側最適化を進める狙いがある。

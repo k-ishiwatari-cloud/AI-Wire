@@ -2,3 +2,5 @@
 # AI クローラーの制限は Cloudflare の Bot Preference Sync がこのファイルの先頭に書き足す。
 User-agent: *
 Allow: /
+
+Sitemap: https://ai-wire.site/sitemap.xml

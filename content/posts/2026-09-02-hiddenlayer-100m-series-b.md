@@ -10,4 +10,4 @@ summary: AIセキュリティ企業HiddenLayerが1億ドルのシリーズBを�
 posted_at: '2026-09-05T08:58:27.814369Z'
 ---
 
-HiddenLayerの発表では、リード投資家にDelta-v Capitalが名を連ね、MicrosoftのM12やモルガン・スタンレー等も参加するとされる。企業向けのAgentic Runtime Securityやエージェントハーネス保護などに注力する計画。 ([hiddenlayer.com](https://www.hiddenlayer.com/newsroom?6739a79d_page=4&utm_source=openai))
+HiddenLayerの発表では、リード投資家にDelta-v Capitalが名を連ね、MicrosoftのM12やモルガン・スタンレー等も参加するとされる。企業向けのAgentic Runtime Securityやエージェントハーネス保護などに注力する計画。

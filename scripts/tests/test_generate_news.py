@@ -1,3 +1,4 @@
+import re
 import pytest
 from news_validation import UrlCheck
 
@@ -175,3 +176,60 @@ def test_non_list_tags_and_invalid_date_are_sanitized(recent_titles):
 def test_extract_json_array_rejects_non_list():
     with pytest.raises(ValueError):
         generate_news.extract_json_array('```json\n{"title": "x"}\n```')
+
+
+# ---------------- 出典リンクの除去 ----------------
+
+def test_strip_citations_removes_parenthesized_markdown_links():
+    text = "資金は製品開発に投じられる。 ([androidcentral.com](https://www.androidcentral.com/a?utm_source=openai))"
+    assert generate_news.strip_citations(text) == "資金は製品開発に投じられる。"
+
+
+def test_strip_citations_removes_links_across_lines_and_keeps_bare_link_text():
+    text = "前半。\n  ([openai.com](https://openai.com/x?utm_source=openai)) 後半は[OpenAI](https://openai.com/)が発表。"
+    assert generate_news.strip_citations(text) == "前半。 後半はOpenAIが発表。"
+
+
+def test_strip_citations_keeps_label_of_meaningful_parenthesized_link():
+    """出典(表示文字列がドメイン名)以外の括弧付きリンクは、表示文字列を残す。"""
+    assert generate_news.strip_citations("([製品名](https://example.com))を発表。") == "(製品名)を発表。"
+
+
+def test_strip_citations_handles_parentheses_in_url():
+    text = "本文。 ([en.wikipedia.org](https://en.wikipedia.org/wiki/A_(b)?utm_source=openai))"
+    assert generate_news.strip_citations(text) == "本文。"
+
+
+def test_strip_citations_removes_citation_with_link_title():
+    assert generate_news.strip_citations('本文。 ([example.com](https://example.com "citation"))') == "本文。"
+
+
+@pytest.mark.parametrize("summary", [
+    "([prtimes.jp](https://prtimes.jp/x?utm_source=openai))",
+    '([example.com](https://example.com "citation"))',
+])
+def test_normalize_item_skips_item_whose_summary_is_only_citations(summary):
+    raw = _raw("タイトル", DART_URL)
+    raw["summary"] = summary
+    assert generate_news.normalize_item(raw, 0, set()) is None
+
+
+def test_strip_citations_keeps_plain_text():
+    assert generate_news.strip_citations("A（B）[注]と(C)。") == "A（B）[注]と(C)。"
+
+
+def test_normalize_item_strips_citations_from_summary_and_body():
+    raw = _raw("タイトル", DART_URL)
+    raw["summary"] = "要約。 ([prtimes.jp](https://prtimes.jp/x?utm_source=openai))"
+    raw["body"] = "本文。 ([prtimes.jp](https://prtimes.jp/y?utm_source=openai))"
+    item = generate_news.normalize_item(raw, 0, set())
+    assert item["summary"] == "要約。"
+    assert item["body"] == "本文。"
+
+
+def test_existing_posts_have_no_markdown_links():
+    from pathlib import Path
+
+    posts = Path(__file__).resolve().parents[2] / "content" / "posts"
+    offenders = [p.name for p in posts.glob("*.md") if re.search(r"\]\(https?://", p.read_text(encoding="utf-8"))]
+    assert offenders == []

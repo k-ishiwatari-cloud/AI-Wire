@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """content/posts/*.md の frontmatter を読み取り、site/data/manifest.json を生成する。
 
-GitHub Actions のビルドステップから呼び出される想定。
+あわせて記事一覧・記事ページ・sitemap.xml を静的 HTML として書き出す(render_site.py)。
+Cloudflare Pages のビルドコマンドから呼び出される。
 依存ライブラリは PyYAML のみ。
 """
 from __future__ import annotations
@@ -14,9 +15,12 @@ from pathlib import Path
 
 import yaml
 
+from render_site import write_site
+
 ROOT = Path(__file__).resolve().parent.parent
 POSTS_DIR = ROOT / "content" / "posts"
-OUTPUT_PATH = ROOT / "site" / "data" / "manifest.json"
+SITE_DIR = ROOT / "site"
+OUTPUT_PATH = SITE_DIR / "data" / "manifest.json"
 
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL)
 REQUIRED_FIELDS = ["title", "date", "source_name", "source_url", "summary"]
@@ -70,9 +74,10 @@ def main() -> None:
     # 新しい日付が先頭に来るように並び替え
     posts.sort(key=lambda p: p["date"], reverse=True)
 
+    generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "generated_at": generated_at,
         "posts": posts,
     }
     OUTPUT_PATH.write_text(
@@ -80,6 +85,9 @@ def main() -> None:
         encoding="utf-8",
     )
     print(f"{len(posts)}件の記事から manifest.json を生成しました -> {OUTPUT_PATH}")
+
+    write_site(posts, generated_at, SITE_DIR)
+    print(f"記事一覧・記事ページ・sitemap.xml を書き出しました -> {SITE_DIR}")
 
 
 if __name__ == "__main__":

@@ -10,4 +10,4 @@ summary: オランダ・イスラエル拠点の企業向けAIプラットフォ
 posted_at: '2026-09-05T08:58:27.815265Z'
 ---
 
-ラウンドはInsight Partnersが主導しSalesforceなどが参加。Wonderfulはエンタープライズ向けのAI OSとエージェント管理を強みとしており、資金はグローバル展開と製品拡張に使われる。 ([wonderful.ai](https://www.wonderful.ai/blog-articles/wonderful-raises-550m-series-c?utm_source=openai))
+ラウンドはInsight Partnersが主導しSalesforceなどが参加。Wonderfulはエンタープライズ向けのAI OSとエージェント管理を強みとしており、資金はグローバル展開と製品拡張に使われる。

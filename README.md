@@ -1,11 +1,11 @@
-# AI WIRE — 社内向けAIニュースフィード
+# AI WIRE — AIニュースフィード
 
 ChatGPTのAIエージェントがAI関連ニュースを収集・要約して投稿し、
 Cloudflare Pagesが自動でビルド・配信する静的サイトです。
 
 ```
 ニュースbot(GitHub Actions) → GitHubに記事(Markdown)をコミット
-                             → Cloudflare Pagesがpushを検知してmanifest.jsonを生成
+                             → Cloudflare Pagesがpushを検知して記事一覧・記事ページを静的HTMLとして生成
                              → Cloudflare Pagesで公開(誰でも閲覧可)
 ```
 
@@ -17,7 +17,8 @@ ai-news-site/
 │   └── posts/                      # 1記事1ファイル(Markdown + frontmatter)
 │       └── 2026-07-10-xxxx.md
 ├── scripts/
-│   ├── build_manifest.py           # posts/*.md → site/data/manifest.json
+│   ├── build_manifest.py           # posts/*.md → manifest.json と静的HTML(ビルドコマンド)
+│   ├── render_site.py              # 記事一覧・記事ページ・sitemap.xml のHTML生成
 │   ├── generate_news.py            # OpenAI APIでニュースを収集し記事を書き出す
 │   ├── news_validation.py          # 記事候補の検証(URL到達確認・重複判定)
 │   ├── publish_post.py             # ローカルの記事ファイルをGitHubへ直接投稿
@@ -25,9 +26,11 @@ ai-news-site/
 ├── site/                           # Cloudflare Pagesで公開される実体
 │   ├── index.html
 │   ├── style.css
-│   ├── app.js
+│   ├── app.js                      # タグ絞り込み・NEW表示(記事の描画はビルド時)
 │   ├── _headers                    # レスポンスヘッダ設定(公開はされない)
-│   └── data/manifest.json          # ビルド時に自動生成(手動編集不要)
+│   ├── data/manifest.json          # ビルド時に自動生成(手動編集不要)
+│   ├── posts/<記事ID>/index.html   # ビルド時に自動生成(git管理外)
+│   └── sitemap.xml                 # ビルド時に自動生成(git管理外)
 ├── aiwire-icons/                   # ロゴ・ファビコンの元データ(公開用は site/ にコピー済み)
 ├── chatgpt-agent/
 │   ├── draft-prompt-template.md    # 通常のChatGPTに貼り付ける記事作成プロンプト
@@ -97,7 +100,7 @@ git push -u origin main
   上限に達すると新しいビルドができなくなる(サイトの更新が止まる)ので、
   ビルド回数をダッシュボードで時々確認すること。節約したい場合は次の設定が有効:
   - **Settings > Builds > Branch control** でプレビュービルドを無効化
-  - **Build watch paths** を `content/posts/*`、`site/*`、`scripts/build_manifest.py` に限定
+  - **Build watch paths** を `content/posts/*`、`site/*`、`scripts/build_manifest.py`、`scripts/render_site.py` に限定
 - ビルド環境: v3 ビルドイメージの Python 3 と pip を使う。バージョンを固定したい場合は
   環境変数 `PYTHON_VERSION` を設定する
 - レスポンスヘッダ: `site/_headers` で設定する(`manifest.json` はキャッシュの再利用前に毎回再検証させる)
@@ -148,12 +151,16 @@ python3 -m http.server 8000
 # http://localhost:8000 を開く
 ```
 
-記事を追加した場合は、先に手元でmanifestを再生成してから確認します。
+記事はビルド時に HTML として書き出すので、先に手元でビルドしてから確認します。
 
 ```bash
 pip install pyyaml
 python3 scripts/build_manifest.py
 ```
+
+ビルドは `site/index.html` の `<!-- build:... -->` の目印の間に記事一覧を書き込みます。
+手元でビルドすると `site/index.html` に差分が出ますが、コミットしないでください
+(`git checkout site/index.html` で元に戻せます。本番では Cloudflare のビルドが毎回書き込みます)。
 
 ## 完全自動投稿(news_bot.yml)
 

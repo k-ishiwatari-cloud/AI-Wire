@@ -10,4 +10,4 @@ summary: 大手新聞社などの幹部が、AIによるコンテンツ利用や
 posted_at: '2026-09-16T22:03:53.712570Z'
 ---
 
-Axios報道（2026-09-16）。出版社側の対応と政府の介入可能性が議論されている。 ([axios.com](https://www.axios.com/2026/09/16/media-execs-sound-alarm-on-ai?utm_source=openai))
+Axios報道（2026-09-16）。出版社側の対応と政府の介入可能性が議論されている。

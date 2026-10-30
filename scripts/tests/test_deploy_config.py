@@ -32,18 +32,26 @@ def test_site_dir_contains_entrypoints():
 
 
 def test_build_generates_manifest_from_posts(tmp_path, monkeypatch):
-    """ビルドコマンドが実行する build_manifest.py で、全記事を含む manifest.json が生成できる。"""
+    """ビルドコマンドが実行する build_manifest.py で、全記事を含む manifest.json と記事ページが生成できる。"""
     import json
+    import shutil
 
     import build_manifest
 
-    output = tmp_path / "data" / "manifest.json"
+    site = tmp_path / "site"
+    site.mkdir()
+    shutil.copy(SITE / "index.html", site / "index.html")
+    output = site / "data" / "manifest.json"
+    monkeypatch.setattr(build_manifest, "SITE_DIR", site)
     monkeypatch.setattr(build_manifest, "OUTPUT_PATH", output)
     build_manifest.main()
 
     payload = json.loads(output.read_text(encoding="utf-8"))
-    assert len(payload["posts"]) == len(list((ROOT / "content" / "posts").glob("*.md")))
+    post_count = len(list((ROOT / "content" / "posts").glob("*.md")))
+    assert len(payload["posts"]) == post_count
     assert all(p["title"] and p["source_url"] for p in payload["posts"])
+    assert len(list((site / "posts").glob("*/index.html"))) == post_count
+    assert (site / "index.html").read_text(encoding="utf-8").count('<article class="card"') == post_count
 
 
 def test_readme_documents_cloudflare_build_settings():

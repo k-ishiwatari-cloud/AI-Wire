@@ -8,6 +8,7 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
+<link rel="canonical" href="https://ai-wire.site/">
 <script src="/analytics.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-F59NHKG7G0"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,17 +26,19 @@
       <div class="wordmark"><img class="wordmark-mark" src="/favicon.svg" alt="" width="28" height="28">AI<span>WIRE</span></div>
       <p class="tagline">AI ニュース・ダイジェスト</p>
 
-      <p class="meta">最終更新 <time id="last-updated">—</time></p>
+      <p class="meta">最終更新 <!-- build:last-updated --><time id="last-updated">—</time><!-- /build:last-updated --></p>
     </div>
 
     <nav class="filters" id="filters" aria-label="タグで絞り込み">
       <button class="filter-chip is-active" data-tag="__all__" type="button">すべて</button>
+      <!-- build:filters --><!-- /build:filters -->
     </nav>
   </aside>
 
   <main class="feed-wrap">
+    <!-- 記事一覧はビルド時に scripts/render_site.py が書き出す -->
     <div class="feed" id="feed">
-      <p class="loading" id="loading">記事を読み込んでいます…</p>
+      <!-- build:feed --><!-- /build:feed -->
     </div>
 
     <footer class="site-footer">
