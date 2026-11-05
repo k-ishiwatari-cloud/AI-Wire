@@ -117,6 +117,22 @@ def test_load_recent_titles_respects_lookback(tmp_path, monkeypatch):
     assert generate_news.load_recent_titles() == ["新しい記事"]
 
 
+def test_write_post_skips_ids_used_as_redirect_sources(tmp_path, monkeypatch):
+    """重複整理で消した記事の ID は site/_redirects で転送されているので、新しい記事に使うと転送に隠れてしまう。"""
+    posts_dir = tmp_path / "posts"
+    posts_dir.mkdir()
+    redirects = tmp_path / "_redirects"
+    redirects.write_text("/posts/2026-11-01-x/ /posts/keep/ 301\n", encoding="utf-8")
+    monkeypatch.setattr(generate_news, "POSTS_DIR", posts_dir)
+    monkeypatch.setattr(generate_news, "REDIRECTS_PATH", redirects)
+
+    path = generate_news.write_post({
+        "title": "t", "date": "2026-11-01", "slug": "x", "source_name": "s",
+        "source_url": "https://example.com", "tags": [], "summary": "s", "body": "",
+    })
+    assert path.name == "2026-11-01-x-2.md"
+
+
 # ---- レビュー指摘への回帰テスト ----
 
 def test_rejects_all_when_no_sources_were_returned(recent_titles):

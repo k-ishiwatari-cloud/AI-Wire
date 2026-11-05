@@ -21,6 +21,8 @@ ai-news-site/
 │   ├── render_site.py              # 記事一覧・記事ページ・sitemap.xml のHTML生成
 │   ├── generate_news.py            # OpenAI APIでニュースを収集し記事を書き出す
 │   ├── news_validation.py          # 記事候補の検証(URL到達確認・重複判定)
+│   ├── find_duplicates.py          # 既存の重複記事の検出と統合(手動実行)
+│   ├── redirects.py                # site/_redirects の読み書き
 │   ├── publish_post.py             # ローカルの記事ファイルをGitHubへ直接投稿
 │   └── tests/                      # pytest
 ├── site/                           # Cloudflare Pagesで公開される実体
@@ -28,6 +30,7 @@ ai-news-site/
 │   ├── style.css
 │   ├── app.js                      # タグ絞り込み・NEW表示(記事の描画はビルド時)
 │   ├── _headers                    # レスポンスヘッダ設定(公開はされない)
+│   ├── _redirects                  # 統合で消した記事の転送設定(公開はされない)
 │   ├── data/manifest.json          # ビルド時に自動生成(手動編集不要)
 │   ├── posts/<記事ID>/index.html   # ビルド時に自動生成(git管理外)
 │   └── sitemap.xml                 # ビルド時に自動生成(git管理外)
@@ -177,6 +180,9 @@ GitHub Actionsワークフローです。
   (pushを検知してCloudflare Pagesが再ビルドし、サイトへ反映される)
 - 記事候補は投稿前に検証する(`scripts/news_validation.py`)。web_searchが実際に
   参照していないURL、到達できないURL、既存記事とタイトルが類似する記事はスキップされる
+- すでに投稿された重複記事は `scripts/find_duplicates.py` で整理する。レポートと計画ファイルを
+  書き出し、別ニュースの記事を `--exclude` で外してから `--apply 計画ファイル` で統合する
+  (消した記事の URL は `site/_redirects` で残す記事へ 301 転送される)
 - サイトの「最終更新」時刻はCloudflare Pagesのビルド時刻。新着記事がない時間帯は進まない
 - 手動実行も可能(Actionsタブから `workflow_dispatch`)
 

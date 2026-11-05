@@ -31,6 +31,7 @@ from news_validation import (
     is_cited,
     normalize_url,
 )
+from redirects import REDIRECTS_PATH, redirected_post_ids
 
 ROOT = Path(__file__).resolve().parent.parent
 POSTS_DIR = ROOT / "content" / "posts"
@@ -270,10 +271,12 @@ def select_items(
 
 
 def write_post(item: dict) -> Path:
+    # 重複整理で消した記事の ID は転送元になっているので、使うと新しい記事が転送に隠れる
+    reserved = redirected_post_ids(REDIRECTS_PATH)
     filename = f"{item['date']}-{item['slug']}.md"
     path = POSTS_DIR / filename
     n = 2
-    while path.exists():
+    while path.exists() or path.stem in reserved:
         path = POSTS_DIR / f"{item['date']}-{item['slug']}-{n}.md"
         n += 1
 
