@@ -133,6 +133,26 @@ def test_write_post_skips_ids_used_as_redirect_sources(tmp_path, monkeypatch):
     assert path.name == "2026-11-01-x-2.md"
 
 
+def test_digests_of_other_curation_sites_are_skipped(recent_titles):
+    """他のまとめサイトの要約は二次情報のさらに二次情報なので載せない(まとめは自サイトの記事から作る)。"""
+    url = "https://aitimes.fyi/edition/2026-10-18"
+    items = select_items(
+        [_raw("日次AIダイジェスト：10月18日の主要トピックまとめ", url)],
+        existing_urls=set(), existing_titles=recent_titles, sources={url}, url_checker=_ok,
+    )
+    assert items == []
+
+
+def test_malformed_url_does_not_stop_other_items(recent_titles):
+    good = "https://example.com/news/ok"
+    items = select_items(
+        [_raw("別の見出し", "https://[bad/news", slug=""), _raw("Google、Gemini 3.8 FlashをGA公開", good, slug="good")],
+        existing_urls=set(), existing_titles=recent_titles, sources={good, "https://[bad/news"},
+        url_checker=lambda u: UrlCheck(u == good, "" if u == good else "形式不正"),
+    )
+    assert [i["slug"] for i in items] == ["good"]
+
+
 # ---- レビュー指摘への回帰テスト ----
 
 def test_rejects_all_when_no_sources_were_returned(recent_titles):

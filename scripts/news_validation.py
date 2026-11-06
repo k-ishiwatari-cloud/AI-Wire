@@ -16,7 +16,7 @@ import urllib.error
 import urllib.request
 from collections import Counter
 from typing import Any, Callable, Iterable, NamedTuple
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 # 既存記事387件を投稿順に再生して決めた値(2026-09時点)。0.43以上はほぼ同一ニュースの言い換えで、
 # これより下げると同じ企業の別ニュース(例: Anthropic の別モデル発表)を誤検出し始める。
@@ -82,6 +82,73 @@ def find_similar_title(
     idf = _idf([*existing, title])
     best = max(((t, _cosine(title, t, idf)) for t in existing), key=lambda x: x[1])
     return best if best[1] >= threshold else None
+
+
+# ---- 他のまとめサイトのまとめ ----
+
+# ニュースが少ない時間帯に、AI が他サイトの日次・週次まとめを 1 本の記事として拾ってしまう。
+# 二次情報のさらに二次情報で価値が低いので載せない(AI WIRE のまとめは自サイトの記事から作る)。
+_DIGEST_TITLE_RE = re.compile(
+    r"ダイジェスト|デイリー|日次まとめ|週次まとめ|日次AI|週次AI|日次ブリーフ|週次ブリーフ|"
+    r"ニュースレター|recap|roundup|round-up|digest|briefing",
+    re.IGNORECASE,
+)
+# 「概況」「短報」「総覧」は単一のニュースの報道にも使われるので、期間を示す語と組み合わさったときだけ数える
+# 機能名にも使われる語(「業界要約」機能など)。見出しの頭のラベルのときだけまとめとみなす
+_LABEL_DIGEST_TITLE_RE = re.compile(
+    r"^(?:[^「」『』【】]{0,10}?|[【「『])(業界要約|週刊まとめ|今週のAIニュース)(?:[】」』：:（(]|$)"
+)
+_WEAK_DIGEST_TITLE_RE = re.compile(r"概況|短報|総覧")
+_PERIOD_RE = re.compile(r"日次|週次|週末|月次|\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日")
+# URL のパスの 1 区切り(/ と / の間)全体がこれらの語なら、まとめのページ。
+# 区切りの一部に含むだけ(例: .../next-week-2026-09-18/、/on-the-issues/)の通常の記事は対象外
+_DIGEST_PATH_SEGMENTS = {
+    "daily", "digest", "archive", "archives", "edition", "newsletter", "newsletters",
+    "briefing", "recap", "roundup", "week", "issues", "ai-news-today", "feed",
+}
+_DIGEST_SEGMENT_RE = re.compile(
+    r"(?:^|-)(?:daily-digest|digest|recap|roundup)$"
+    r"|^week-[a-z]{3,9}-\d{1,2}(?:-\d{4})?(?:\.html?)?$",  # 週ごとのまとめ(例: /news/week-oct-19/)
+    re.IGNORECASE,
+)
+# パスの最後がこれらの語なら、個別記事ではなく記事一覧のページ(例: https://huggingface.co/blog)
+_LISTING_LAST_SEGMENTS = {"blog", "news", "newsroom", "press", "press-releases", "company-announcements"}
+# これらのサイトでパスの最後が日付だけなら、その日の発表をまとめたページ(例: https://getyourbrief.com/ai/2026-10-29)。
+# 日付を slug にする個別記事のサイトもあるので、まとめと分かっているサイトに限る
+_DATE_PAGE_HOSTS = {"getyourbrief.com", "aidr.today", "explainx.ai"}
+_DATE_ONLY_SEGMENT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def digest_reason(title: str, url: str) -> str | None:
+    """他サイトのまとめ(日次・週次のダイジェスト、ニュースレター、トップページ、記事一覧)を指す記事候補なら、
+    その判定理由。該当しなければ None。形式不正の URL は到達確認で落とすので、ここでは None を返す。"""
+    try:
+        parts = urlsplit(url)
+        path = unquote(parts.path)
+        host = (parts.hostname or "").removeprefix("www.")
+    except ValueError:
+        return None
+    segments = [s for s in path.lower().split("/") if s]
+    if not segments:
+        return "トップページ"
+    if match := _DIGEST_TITLE_RE.search(title):
+        return f"タイトルの語「{match.group(0)}」"
+    if match := _LABEL_DIGEST_TITLE_RE.search(title):
+        return f"タイトルの語「{match.group(1)}」"
+    if (match := _WEAK_DIGEST_TITLE_RE.search(title)) and (period := _PERIOD_RE.search(title)):
+        return f"タイトルの語「{match.group(0)}」「{period.group(0)}」"
+    for s in segments:
+        if s in _DIGEST_PATH_SEGMENTS or _DIGEST_SEGMENT_RE.search(s):
+            return f"URL のパス「{s}」"
+    if segments[-1] in _LISTING_LAST_SEGMENTS:
+        return f"記事一覧のページ「/{segments[-1]}」"
+    if host in _DATE_PAGE_HOSTS and _DATE_ONLY_SEGMENT_RE.match(segments[-1]):
+        return f"日付だけのページ「/{segments[-1]}」"
+    return None
+
+
+def is_digest(title: str, url: str) -> bool:
+    return digest_reason(title, url) is not None
 
 
 # ---- URL 正規化・引用元照合 ----

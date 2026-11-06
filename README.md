@@ -20,7 +20,7 @@ ai-news-site/
 │   ├── build_manifest.py           # posts/*.md → manifest.json と静的HTML(ビルドコマンド)
 │   ├── render_site.py              # 記事一覧・記事ページ・sitemap.xml のHTML生成
 │   ├── generate_news.py            # OpenAI APIでニュースを収集し記事を書き出す
-│   ├── news_validation.py          # 記事候補の検証(URL到達確認・重複判定)
+│   ├── news_validation.py          # 記事候補の検証(URL到達確認・重複判定・他サイトのまとめの除外)
 │   ├── find_duplicates.py          # 既存の重複記事の検出と統合(手動実行)
 │   ├── redirects.py                # site/_redirects の読み書き
 │   ├── publish_post.py             # ローカルの記事ファイルをGitHubへ直接投稿
@@ -179,7 +179,8 @@ GitHub Actionsワークフローです。
   新しい記事があればコミット・push する
   (pushを検知してCloudflare Pagesが再ビルドし、サイトへ反映される)
 - 記事候補は投稿前に検証する(`scripts/news_validation.py`)。web_searchが実際に
-  参照していないURL、到達できないURL、既存記事とタイトルが類似する記事はスキップされる
+  参照していないURL、到達できないURL、既存記事とタイトルが類似する記事、
+  他サイトのまとめ(日次・週次のダイジェスト、ニュースレター、トップページ・記事一覧のページ)はスキップされる
 - すでに投稿された重複記事は `scripts/find_duplicates.py` で整理する。レポートと計画ファイルを
   書き出し、別ニュースの記事を `--exclude` で外してから `--apply 計画ファイル` で統合する
   (消した記事の URL は `site/_redirects` で残す記事へ 301 転送される)

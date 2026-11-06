@@ -29,6 +29,7 @@ from news_validation import (
     extract_source_urls,
     find_similar_title,
     is_cited,
+    digest_reason,
     normalize_url,
 )
 from redirects import REDIRECTS_PATH, redirected_post_ids
@@ -84,6 +85,8 @@ PROMPT_TEMPLATE = """直近0〜2日以内の、主要なAI関連ニュースを{
   (それでも当てはまらない場合に限り、新しいタグを追加してもよい)
 - "Test" や "サンプル" など、動作確認用・仮のタグやタイトルは使わないこと
 - source_url は実在する具体的なURLにすること(架空のURLを作らない)
+- 他サイトの日次・週次まとめ、ダイジェスト、ニュースレター、トップページは選ばないこと。
+  まとめに載っている個々のニュースを選ぶ場合は、その一次情報か報道記事のURLを使うこと
 - 以下は直近{lookback}日間に既に投稿済みのニュースなので、同じ話題は選ばないこと:
 {existing}
 """
@@ -147,7 +150,10 @@ def extract_json_array(text: str) -> list[dict]:
 
 
 def slugify_fallback(item: dict, index: int) -> str:
-    url_path = urlparse(item.get("source_url", "")).path.strip("/").split("/")[-1]
+    try:
+        url_path = urlparse(item.get("source_url", "")).path.strip("/").split("/")[-1]
+    except ValueError:  # 形式不正の URL は到達確認で落とす
+        url_path = ""
     candidate = re.sub(r"[^a-z0-9\-]+", "-", url_path.lower()).strip("-")
     if candidate:
         return candidate[:60]
@@ -223,7 +229,7 @@ def select_items(
 ) -> list[dict]:
     """AIが返した候補から、投稿してよい記事だけを選ぶ。
 
-    判定順(安価なものから): 必須項目・URL重複 → タイトル類似 → 引用元照合 → 到達確認。
+    判定順(安価なものから): 必須項目・URL重複 → 他サイトのまとめ → タイトル類似 → 引用元照合 → 到達確認。
     sources が空(web_search の参照元が取れない)場合は、捏造URLを防げないため全件不採用にする。
     """
     if not sources:
@@ -236,6 +242,15 @@ def select_items(
     for i, raw_item in enumerate(raw_items, start=1):
         item = normalize_item(raw_item, i, seen_urls)
         if item is None:
+            continue
+
+        reason = digest_reason(item["title"], item["source_url"])
+        if reason:
+            print(
+                f"::warning:: {i}件目: 他サイトのまとめ記事とみなしたためスキップ [{reason}]"
+                f" ({item['title']} / {item['source_url']})",
+                file=sys.stderr,
+            )
             continue
 
         similar = find_similar_title(item["title"], accepted_titles)

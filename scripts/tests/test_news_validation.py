@@ -12,6 +12,8 @@ from news_validation import (
     find_similar_title,
     is_cited,
     normalize_url,
+    digest_reason,
+    is_digest,
     title_similarity,
 )
 
@@ -263,3 +265,88 @@ def test_blocked_redirect_closes_response():
         _SafeRedirectHandler().redirect_request(
             urllib.request.Request("https://public.example/a"), fp, 302, "Found", {}, "ftp://127.0.0.1/x")
     assert closed
+
+
+# ---- 他のまとめサイトのまとめ ----
+
+@pytest.mark.parametrize("title, url", [
+    ("10月23日付のAI短報アーカイブ（日次まとめ）", "https://metamesh.biz/archive/2026/10/23"),
+    ("日次AIダイジェスト：10月18日の主要トピックまとめ", "https://aitimes.fyi/edition/2026-10-18"),
+    ("週次AIまとめ：複数社で能力と安全性の議論が集中", "https://agihunt.info/en/daily/2026-09-04"),
+    ("AI Tools Recap：エージェント関連の最新事例まとめ", "https://aitoolsrecap.com/ai-news-today"),
+    ("エージェント関連の短報：最新の事例とインシデント追跡（総覧）", "https://agentnewsdaily.com/"),
+    ("業界ダイジェスト：OpenAI訓練方針やエージェント事案の続報",
+     "https://www.axios.com/newsletters/axios-ai-plus-112255f2-e25f-4dbf-a107-92126a1869ca"),
+    ("24日付：日次AI概況（業界誌まとめ）", "https://aiuniversejournal.org/issues/2026-10-24/"),
+    ("業界総覧：10月10–11日のAI短報", "https://ai0.news/posts/2026-10-11-daily-digest/"),
+    ("エージェント群の外部投稿問題、調査報告が波紋に", "https://aibriefs.news/briefing/2026-09-12"),
+    ("AIセキュリティ週次ブリーフ：エージェント・規制動向を整理", "https://eyeon.ai/feed?date=2026-10-09"),
+    ("Hugging Face、エージェント関連の投稿を公開", "https://huggingface.co/blog"),
+    ("OpenAI、複数の発表", "https://openai.com/news/company-announcements/?display=list"),
+    ("通常の見出し", "https://example.com/%64igest/2026-11-06"),
+    ("AI速報：AI Breaking Wireの10/12概況", "https://aibreakingwire.com/news/ai-brief-2026-10-12"),
+    ("業界概況：AI学習コスト・動向の最新分析（週次）", "https://www.tomshardware.com/tech-industry/this-week-premium"),
+    ("業界要約：エージェント関連の新規インシデントと方針転換", "https://example.com/en/news/1"),
+    ("通常の見出し", "https://thejarrus.com/en/news/week-oct-19/"),
+    ("AI週刊まとめ", "https://example.com/news/1"),
+    ("AI週刊まとめ（10/19）", "https://example.com/news/1"),
+    ("今週のAIニュース：新モデル発表と規制動向", "https://example.com/news/1"),
+    ("通常の見出し", "https://example.com/news/week-september-9/"),
+    ("通常の見出し", "https://example.com/news/WEEK-OCT-19/"),
+    ("通常の見出し", "https://example.com/news/week-oct-19-2026/"),
+    ("通常の見出し", "https://example.com/news/week-oct-19.html"),
+    # 日付だけのページは、その日の発表をまとめたもの
+    ("複数の小規模企業が10月29日にAI製品・提携を発表", "https://getyourbrief.com/ai/2026-10-29"),
+    ("通常の見出し", "https://aidr.today/date/2026-10-17?lang=en"),
+    ("通常の見出し", "https://explainx.ai/catch-up-on-ai/2026-10-18"),
+    ("通常の見出し", "https://example.com/news/week-oct-19-2026.html"),
+    ("【週刊まとめ】新モデル発表と規制動向", "https://example.com/news/1"),
+    ("「今週のAIニュース」：新モデル発表と規制動向", "https://example.com/news/1"),
+    ("0123456789業界要約：見出しの頭から10字まではラベル", "https://example.com/news/1"),
+])
+def test_digests_of_other_curation_sites_are_detected(title, url):
+    assert is_digest(title, url)
+
+
+@pytest.mark.parametrize("title, url", [
+    ("Anthropic、悪用事例をまとめた脅威報告を公開",
+     "https://www.axios.com/2026/09/12/anthropic-ai-threat-report-russia-iran-china"),
+    ("AI博覧会のアーカイブ配信を開始", "https://prtimes.jp/main/html/rd/p/000000838.000053344.html"),
+    ("Google、Gemini 3.8 FlashをGA公開", "https://blog.google/products/gemini/gemini-3-8-flash/"),
+    ("経産省、AI事業者ガイドラインの週次説明会を開催", "https://www.meti.go.jp/press/2026/10/20261001001/20261001001.html"),
+    # URL の単語の一部に daily / week / issues などを含むだけの通常の記事
+    ("OpenAIのサム・オルトマン氏が国連安全保障理事会で説明へ",
+     "https://www.reuters.com/world/openai-sam-altman-brief-un-security-council-next-week-2026-09-18/"),
+    ("MicrosoftがAI支援の詐欺サービスを停止",
+     "https://blogs.microsoft.com/on-the-issues/2026/09/22/disrupting-eviltokens-the-ai-chatbot-built-for-cybercrime/"),
+    ("上院向けのAIブリーフィングをサンダース氏が招集", "https://www.axios.com/2026/09/09/sanders-senators-ai-briefing"),
+    # 「概況」「短報」だけでは単一のニュースの報道もある。日次・週次・日付と組み合わさったときだけまとめとみなす
+    ("FTC捜査報道を受けた業界影響の概況",
+     "https://www.cbsnews.com/news/ftc-subpoenas-anthropic-openai-consumer-protection/"),
+    # 週刊誌の報道は個別のニュース
+    ("週刊東洋経済、生成AIの導入実態を特集", "https://toyokeizai.net/articles/-/900001"),
+    ("開発者向けイベントの週を発表", "https://example.com/news/week-of-ai-2026"),
+    ("通常の見出し", "https://example.com/news/next-week-oct-19/"),
+    ("通常の見出し", "https://example.com/news/week-oct-19-launch/"),
+    # 機能名としての「業界要約」「週刊まとめ」は個別のニュース
+    ("AIによる「業界要約」機能を提供開始", "https://example.com/news/1"),
+    ("Slackに「週刊まとめ」機能を追加", "https://example.com/news/2"),
+    # 日付を含むだけの個別記事の URL
+    ("通常の見出し", "https://www.axios.com/2026/09/12/anthropic-ai-threat-report"),
+    # 日付を slug にする個別記事のサイトもあるので、日付だけのページはまとめと分かっているサイトに限る
+    ("通常の見出し", "https://blog.example.com/posts/2026-10-29"),
+    ("01234567890業界要約：11字目からは本文中の語", "https://example.com/news/1"),
+])
+def test_ordinary_news_is_not_a_digest(title, url):
+    assert not is_digest(title, url)
+
+
+def test_malformed_url_is_not_treated_as_digest_and_does_not_raise():
+    """形式不正の URL は到達確認で落とす。ここで例外を出してその回の候補全体を止めない。"""
+    assert digest_reason("通常の見出し", "https://[bad/news") is None
+
+
+def test_digest_reason_names_the_matched_rule():
+    assert "トップページ" in digest_reason("通常の見出し", "https://www.reuters.com/")
+    assert "概況" in digest_reason("10月12日の業界概況", "https://example.com/news/1")
+    assert "archive" in digest_reason("通常の見出し", "https://metamesh.biz/archive/2026/10/23")
