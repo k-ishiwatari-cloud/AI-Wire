@@ -1,0 +1,108 @@
+name: Weekly roundup draft
+
+# 先週(月〜日)の記事から週次まとめの下書きを作り、PR にする。人が確認して Merge すると公開される。
+on:
+  schedule:
+    # 毎週月曜 7:00(日本時間)= 日曜 22:00 UTC
+    - cron: "0 22 * * 0"
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "対象の週(例: 2026-w44)。空なら最後に終わった週"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# 同じ週の下書きを 2 つ作らないよう、同時に 1 つだけ実行する
+concurrency:
+  group: weekly-roundup
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest scripts/tests -q
+
+      # 生成(API の呼び出し)の前に、その週の状態を確かめる
+      #   generate: まだ何もない → 下書きを作って PR にする
+      #   pr-only:  ブランチだけある(前回 PR の作成に失敗した)→ PR だけ作り直す
+      #   skip:     公開済み、または PR がある(確認待ち・Close 済みとも。Close は「公開しない」判断)
+      - name: Check state
+        id: state
+        env:
+          WEEK: ${{ inputs.week }}
+        run: |
+          rid=$(python scripts/generate_roundup.py --print-week ${WEEK:+--week "$WEEK"})
+          branch="roundup/$rid"
+          if [ -f "content/roundups/$rid.md" ]; then
+            mode=skip; echo "$rid は公開済みです。"
+          elif [ "$(gh pr list --head "$branch" --state all --json number --jq length)" != "0" ]; then
+            mode=skip; echo "$rid は PR が既にあります(確認待ちか Close 済み)。Close した週を公開するときは、その PR を Reopen してください。"
+          elif git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            mode=pr-only; echo "::warning:: ブランチ $branch だけが残っているので、PR を作り直します。"
+          else
+            mode=generate
+          fi
+          { echo "rid=$rid"; echo "branch=$branch"; echo "mode=$mode"; } >> "$GITHUB_OUTPUT"
+
+      - name: Generate draft
+        if: steps.state.outputs.mode == 'generate'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RID: ${{ steps.state.outputs.rid }}
+        run: python scripts/generate_roundup.py --week "$RID" --report "$RUNNER_TEMP/report.md"
+
+      - name: Push branch
+        if: steps.state.outputs.mode == 'generate'
+        env:
+          RID: ${{ steps.state.outputs.rid }}
+          BRANCH: ${{ steps.state.outputs.branch }}
+        run: |
+          path="content/roundups/$RID.md"
+          if [ ! -f "$path" ]; then
+            echo "$RID の記事がないので、下書きは作りませんでした。"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add "$path"
+          git commit -m "roundup: 週次まとめの下書き $RID"
+          git push -u origin "$BRANCH"
+
+      - name: Open pull request
+        if: steps.state.outputs.mode != 'skip'
+        env:
+          RID: ${{ steps.state.outputs.rid }}
+          BRANCH: ${{ steps.state.outputs.branch }}
+        run: |
+          if ! git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
+            exit 0  # 記事がなく、ブランチを作らなかった
+          fi
+          body="$RUNNER_TEMP/report.md"
+          if [ ! -f "$body" ]; then
+            # PR だけを作り直すときは、ブランチにある下書きを検査し直して本文を作る
+            git fetch --depth 1 origin "$BRANCH"
+            mkdir -p "$RUNNER_TEMP/draft"
+            git show "FETCH_HEAD:content/roundups/$RID.md" > "$RUNNER_TEMP/draft/$RID.md"
+            python scripts/generate_roundup.py --check "$RUNNER_TEMP/draft/$RID.md" --report "$body"
+          fi
+          gh pr create --base main --head "$BRANCH" --title "週次まとめ $RID の確認" --body-file "$body"

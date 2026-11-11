@@ -14,11 +14,15 @@ Cloudflare Pagesが自動でビルド・配信する静的サイトです。
 ```
 ai-news-site/
 ├── content/
-│   └── posts/                      # 1記事1ファイル(Markdown + frontmatter)
-│       └── 2026-07-10-xxxx.md
+│   ├── posts/                      # 1記事1ファイル(Markdown + frontmatter)
+│   │   └── 2026-07-10-xxxx.md
+│   └── roundups/                   # 週次まとめ(1週1ファイル。例: 2026-w44.md)
 ├── scripts/
 │   ├── build_manifest.py           # posts/*.md → manifest.json と静的HTML(ビルドコマンド)
-│   ├── render_site.py              # 記事一覧・記事ページ・sitemap.xml のHTML生成
+│   ├── render_site.py              # 記事一覧・記事ページ・まとめ・sitemap.xml のHTML生成
+│   ├── generate_roundup.py         # 先週の記事から週次まとめの下書きを作る
+│   ├── roundups.py                 # まとめのファイル形式と対象週の決め方
+│   ├── roundup_markdown.py         # まとめ本文(Markdownの一部)のHTML変換
 │   ├── generate_news.py            # OpenAI APIでニュースを収集し記事を書き出す
 │   ├── news_validation.py          # 記事候補の検証(URL到達確認・重複判定・他サイトのまとめの除外)
 │   ├── find_duplicates.py          # 既存の重複記事の検出と統合(手動実行)
@@ -33,6 +37,7 @@ ai-news-site/
 │   ├── _redirects                  # 統合で消した記事の転送設定(公開はされない)
 │   ├── data/manifest.json          # ビルド時に自動生成(手動編集不要)
 │   ├── posts/<記事ID>/index.html   # ビルド時に自動生成(git管理外)
+│   ├── roundups/<まとめID>/index.html # ビルド時に自動生成(git管理外)
 │   └── sitemap.xml                 # ビルド時に自動生成(git管理外)
 ├── aiwire-icons/                   # ロゴ・ファビコンの元データ(公開用は site/ にコピー済み)
 ├── chatgpt-agent/
@@ -40,6 +45,7 @@ ai-news-site/
 │   ├── openapi-github-actions.yaml # (参考)Custom GPT Actions用スキーマ
 │   └── agent-instructions.md       # (参考)Custom GPTのInstructions欄テンプレート
 ├── .github/workflows/news_bot.yml  # 毎時のニュース自動収集・投稿
+├── .github/workflows/weekly_roundup.yml # 毎週の週次まとめの下書き(PR)
 └── README.md
 ```
 
@@ -191,6 +197,35 @@ GitHub Actionsワークフローです。
 
 リポジトリの **Settings > Secrets and variables > Actions** で
 `OPENAI_API_KEY` を登録してください。
+
+## 週次まとめ(weekly_roundup.yml)
+
+毎週月曜 7:00(日本時間)に、先週(月〜日)の記事から週次まとめの下書きを作り、PR にします。
+人が確認して Merge すると `/roundups/<週ID>/` に公開され、トップページに最新のまとめが出ます。
+
+- `scripts/generate_roundup.py` が `content/posts/` の記事のタイトルと要約だけを材料に
+  OpenAI API(既定は `gpt-5.6-luna`。環境変数 `ROUNDUP_MODEL` で変更可)で下書きを書かせ、
+  `content/roundups/<週ID>.md`(例: `2026-w44.md`)に書き出す。Web 検索は使わない
+- 下書きは機械的に検査する。存在しない記事へのリンク・リンクなし・空の本文は書き直させ(1 回まで)、
+  文字数・外部リンク・材料に見当たらない数字などは PR の本文に確認項目として載せる
+- 本文で使える書式は `##`/`###` の見出し、箇条書き、段落、太字、リンクだけ(`scripts/roundup_markdown.py`)。
+  それ以外はすべて文字としてエスケープされる
+- 手動実行も可能(Actions タブから `workflow_dispatch`。`week` に `2026-w44` のように週を指定できる)
+- 同じ週が公開済みか、PR がある(確認待ち・Close 済みとも)場合は作り直さない。Close した週を公開したくなったら、
+  その PR を Reopen して直す。ブランチだけが残っている場合(PR の作成に失敗した場合)は、下書きを検査し直して PR だけを作る
+
+### セットアップ
+
+- **Settings > Actions > General > Workflow permissions** で
+  「Allow GitHub Actions to create and approve pull requests」を有効にする(PR を作るため)
+- Cloudflare Pages の **Settings > Builds & deployments > Preview deployments** を
+  「All non-production branches」にする(PR ごとのプレビュー URL で確認するため)
+
+### 確認のしかた
+
+1. PR が届いたら、プレビューの URL で `/roundups/` を開いて読む
+2. 直す場合は、PR の Files changed からファイルを編集してコミットする
+3. 問題なければ Merge する(公開される)。公開しない場合は Close する
 
 ### 既知の注意点
 

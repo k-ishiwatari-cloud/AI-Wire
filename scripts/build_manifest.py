@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """content/posts/*.md の frontmatter を読み取り、site/data/manifest.json を生成する。
 
-あわせて記事一覧・記事ページ・sitemap.xml を静的 HTML として書き出す(render_site.py)。
+あわせて記事一覧・記事ページ・まとめ(content/roundups/)・sitemap.xml を静的 HTML として書き出す(render_site.py)。
 Cloudflare Pages のビルドコマンドから呼び出される。
 依存ライブラリは PyYAML のみ。
 """
@@ -16,6 +16,7 @@ from pathlib import Path
 import yaml
 
 from render_site import write_site
+from roundups import load_roundups
 
 ROOT = Path(__file__).resolve().parent.parent
 POSTS_DIR = ROOT / "content" / "posts"
@@ -86,8 +87,14 @@ def main() -> None:
     )
     print(f"{len(posts)}件の記事から manifest.json を生成しました -> {OUTPUT_PATH}")
 
-    write_site(posts, generated_at, SITE_DIR)
-    print(f"記事一覧・記事ページ・sitemap.xml を書き出しました -> {SITE_DIR}")
+    try:
+        roundups = load_roundups()
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        sys.exit(1)
+
+    write_site(posts, generated_at, SITE_DIR, roundups)
+    print(f"記事一覧・記事ページ・まとめ {len(roundups)} 件・sitemap.xml を書き出しました -> {SITE_DIR}")
 
 
 if __name__ == "__main__":

@@ -281,3 +281,97 @@ def test_index_hides_body_and_source_which_stay_on_post_page():
     for text in ("本文1行目", "Example News で読む →", LONG_SUMMARY):
         assert text not in index, text
         assert text in page, text
+
+
+# ---------------- まとめ記事 ----------------
+
+def _roundup(**overrides):
+    r = {
+        "id": "2026-w44",
+        "kind": "weekly",
+        "title": "週次まとめ 2026年10月26日〜11月1日",
+        "period_start": "2026-10-26",
+        "period_end": "2026-11-01",
+        "summary": "今週の <要約> & ポイント。",
+        "body": "## テーマ\n\n[源内](/posts/2026-10-26-gennai/)にエージェント機能。",
+        "generated_at": "2026-11-01T22:05:00Z",
+        "model": "gpt-5.6-luna",
+    }
+    r.update(overrides)
+    return r
+
+
+def test_roundup_page_renders_title_body_and_metadata():
+    html = render_site.render_roundup_page(_roundup())
+    assert "<title>週次まとめ 2026年10月26日〜11月1日 — AI WIRE</title>" in html
+    assert '<link rel="canonical" href="https://ai-wire.site/roundups/2026-w44/">' in html
+    assert '<meta name="description" content="今週の &lt;要約&gt; &amp; ポイント。">' in html
+    assert "<h1>週次まとめ 2026年10月26日〜11月1日</h1>" in html
+    assert '<h2>テーマ</h2>' in html
+    assert '<a href="/posts/2026-10-26-gennai/">源内</a>' in html
+    assert render_site.HEAD_ASSETS in html
+
+
+def test_roundup_page_says_it_was_written_by_ai_from_site_articles():
+    html = render_site.render_roundup_page(_roundup())
+    assert "AI" in html and "掲載した記事" in html
+
+
+def test_roundups_index_lists_every_roundup_newest_first():
+    html = render_site.render_roundups_index([_roundup(id="2026-w45", title="新"), _roundup(id="2026-w44", title="旧")])
+    assert html.index('href="/roundups/2026-w45/"') < html.index('href="/roundups/2026-w44/"')
+    assert '<link rel="canonical" href="https://ai-wire.site/roundups/">' in html
+
+
+def test_index_shows_latest_roundup_banner():
+    template = (SITE / "index.html").read_text(encoding="utf-8")
+    once = render_site.render_index(template, [_post()], "2026-10-29T11:05:00Z",
+                                    [_roundup(id="2026-w45", title="新しい週"), _roundup(id="2026-w44", title="古い週")])
+    assert 'href="/roundups/2026-w45/"' in once and "新しい週" in once
+    assert "古い週" not in once
+    assert 'href="/roundups/"' in once
+    assert render_site.render_index(once, [_post()], "2026-10-29T11:05:00Z",
+                                    [_roundup(id="2026-w45", title="新しい週")]) == once
+
+
+def test_index_without_roundups_has_no_banner():
+    template = (SITE / "index.html").read_text(encoding="utf-8")
+    assert "roundup-banner" not in render_site.render_index(template, [_post()], "2026-10-29T11:05:00Z")
+
+
+def test_index_template_has_roundup_marker():
+    template = (SITE / "index.html").read_text(encoding="utf-8")
+    assert "<!-- build:roundup -->" in template and "<!-- /build:roundup -->" in template
+
+
+def test_sitemap_lists_roundups_after_posts():
+    xml = render_site.render_sitemap([_post(id="a")], [_roundup(id="2026-w44")])
+    assert re.findall(r"<loc>([^<]+)</loc>", xml)[-3:] == [
+        "https://ai-wire.site/posts/a/",
+        "https://ai-wire.site/roundups/",
+        "https://ai-wire.site/roundups/2026-w44/",
+    ]
+
+
+def test_write_site_outputs_roundup_pages_and_removes_stale_ones(tmp_path):
+    site = _site_copy(tmp_path)
+    stale = site / "roundups" / "2026-w01" / "index.html"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("old", encoding="utf-8")
+
+    render_site.write_site([_post(id="a")], "2026-10-29T11:05:00Z", site, [_roundup()])
+
+    assert (site / "roundups" / "2026-w44" / "index.html").is_file()
+    assert (site / "roundups" / "index.html").is_file()
+    assert not stale.exists()
+
+
+@pytest.mark.parametrize("rid", ["../escape", "a/b", "-x"])
+def test_write_site_rejects_unsafe_roundup_ids(tmp_path, rid):
+    site = _site_copy(tmp_path)
+    with pytest.raises(ValueError):
+        render_site.write_site([_post(id="a")], "2026-10-29T11:05:00Z", site, [_roundup(id=rid)])
+
+
+def test_generated_roundup_pages_are_not_committed():
+    assert "site/roundups/" in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()

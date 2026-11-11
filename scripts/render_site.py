@@ -1,4 +1,5 @@
-"""記事一覧(site/index.html)・記事ページ(site/posts/<id>/)・sitemap.xml を静的 HTML として書き出す。
+"""記事一覧(site/index.html)・記事ページ(site/posts/<id>/)・まとめ記事(site/roundups/<id>/)・sitemap.xml を
+静的 HTML として書き出す。
 
 JavaScript を実行しないクローラー(AdSense の審査など)にも記事が見えるよう、ビルド時に描画する。
 build_manifest.py から呼び出される。依存は標準ライブラリのみ。
@@ -15,6 +16,8 @@ from datetime import date, datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
+
+from roundup_markdown import render_markdown
 
 BASE_URL = "https://ai-wire.site"
 TAG_ORDER = ["Release", "Agent", "Benchmark", "Framework", "OSS", "Policy", "Research", "Safety", "Japan", "Other"]
@@ -39,8 +42,18 @@ HEAD_ASSETS = """\
      crossorigin="anonymous"></script>"""
 
 
+FOOTER = """\
+  <footer class="site-footer">
+    <a href="/privacy">プライバシーポリシー</a>
+  </footer>"""
+
+
 def post_path(post: dict) -> str:
     return f"/posts/{post['id']}/"
+
+
+def roundup_path(roundup: dict) -> str:
+    return f"/roundups/{roundup['id']}/"
 
 
 def format_date_heading(date_str: str) -> str:
@@ -147,39 +160,60 @@ def _fill(html: str, name: str, content: str) -> str:
     return pattern.sub(lambda m: m.group(1) + content + m.group(2), html, count=1)
 
 
-def render_index(template: str, posts: list[dict], generated_at: str) -> str:
+def render_latest_roundup(roundups: list[dict]) -> str:
+    """トップに出す最新のまとめ。roundups は新しい順に並んでいる前提。"""
+    if not roundups:
+        return ""
+    latest = roundups[0]
+    return "\n".join([
+        "",
+        '<section class="roundup-banner">',
+        f'  <a class="roundup-banner-link" href="{roundup_path(latest)}">',
+        f'    <span class="roundup-banner-title">{escape(latest["title"])}</span>',
+        f'    <span class="roundup-banner-summary">{escape(latest["summary"])}</span>',
+        "  </a>",
+        '  <a class="roundup-banner-all" href="/roundups/">過去のまとめ →</a>',
+        "</section>",
+        "",
+    ])
+
+
+def render_index(template: str, posts: list[dict], generated_at: str, roundups: list[dict] = ()) -> str:
     last_updated = (f'<time id="last-updated" datetime="{escape(generated_at)}">'
                     f"{format_last_updated(generated_at)}</time>")
     html = _fill(template, "last-updated", last_updated)
+    html = _fill(html, "roundup", render_latest_roundup(list(roundups)))
     html = _fill(html, "filters", "\n" + render_filters(posts) + "\n")
     return _fill(html, "feed", "\n" + render_feed(posts) + "\n")
 
 
 def render_post_page(post: dict) -> str:
-    title = escape(post["title"])
-    return f"""<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title} — AI WIRE</title>
-<meta name="description" content="{escape(post["summary"])}">
-<link rel="canonical" href="{BASE_URL}{post_path(post)}">
-{HEAD_ASSETS}
-</head>
-<body>
-
-<main class="post-page">
+    main = f"""<main class="post-page">
   <p class="doc-back"><a href="/">← AI WIRE トップへ戻る</a></p>
 
 <div class="date-block is-last" style="--cards: 1">
 {_date_group(post["date"], [render_card(post, full=True)])}
 </div>
 
-  <footer class="site-footer">
-    <a href="/privacy">プライバシーポリシー</a>
-  </footer>
-</main>
+{FOOTER}
+</main>"""
+    return _page(post["title"], post["summary"], post_path(post), main)
+
+
+def _page(title: str, description: str, path: str, main: str) -> str:
+    return f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{escape(title)} — AI WIRE</title>
+<meta name="description" content="{escape(description)}">
+<link rel="canonical" href="{BASE_URL}{path}">
+{HEAD_ASSETS}
+</head>
+<body>
+
+{main}
 
 <script src="/app.js"></script>
 </body>
@@ -187,7 +221,54 @@ def render_post_page(post: dict) -> str:
 """
 
 
-def render_sitemap(posts: list[dict]) -> str:
+def _period(roundup: dict) -> str:
+    start, end = date.fromisoformat(roundup["period_start"]), date.fromisoformat(roundup["period_end"])
+    end_text = f"{end.month}月{end.day}日" if end.year == start.year else f"{end.year}年{end.month}月{end.day}日"
+    return f"{start.year}年{start.month}月{start.day}日〜{end_text}"
+
+
+def render_roundup_page(roundup: dict) -> str:
+    main = f"""<main class="doc roundup-page">
+  <p class="doc-back"><a href="/">← AI WIRE トップへ戻る</a> ・ <a href="/roundups/">まとめ一覧</a></p>
+
+  <h1>{escape(roundup["title"])}</h1>
+  <p class="doc-meta">対象期間: {escape(_period(roundup))}</p>
+
+  <div class="roundup-body">
+{render_markdown(roundup["body"])}
+  </div>
+
+  <p class="roundup-note">このまとめは、AI WIRE に掲載した記事をもとに AI が作成し、編集者が確認して公開しています。
+  個々のニュースの詳細は、リンク先の記事と出典をご覧ください。</p>
+
+{FOOTER}
+</main>"""
+    return _page(roundup["title"], roundup["summary"], roundup_path(roundup), main)
+
+
+def render_roundups_index(roundups: list[dict]) -> str:
+    """roundups は新しい順に並んでいる前提。"""
+    items = "\n".join(
+        f'    <li><a href="{roundup_path(r)}">{escape(r["title"])}</a>'
+        f'<p class="roundup-list-summary">{escape(r["summary"])}</p></li>'
+        for r in roundups
+    )
+    main = f"""<main class="doc roundup-page">
+  <p class="doc-back"><a href="/">← AI WIRE トップへ戻る</a></p>
+
+  <h1>まとめ一覧</h1>
+  <p class="doc-meta">AI WIRE に掲載した記事から、1 週間の流れをまとめています。</p>
+
+  <ul class="roundup-list">
+{items}
+  </ul>
+
+{FOOTER}
+</main>"""
+    return _page("まとめ一覧", "AI WIRE の週次まとめの一覧です。", "/roundups/", main)
+
+
+def render_sitemap(posts: list[dict], roundups: list[dict] = ()) -> str:
     """記事の更新日時は管理していないので lastmod は出さない(ニュースの日付は更新日時ではない)。"""
     def url(path: str) -> str:
         return f"  <url><loc>{BASE_URL}{path}</loc></url>"
@@ -198,6 +279,8 @@ def render_sitemap(posts: list[dict]) -> str:
         url("/"),
         url("/privacy"),
         *(url(post_path(p)) for p in posts),
+        *([url("/roundups/")] if roundups else []),
+        *(url(roundup_path(r)) for r in roundups),
         "</urlset>",
     ]
     return "\n".join(lines) + "\n"
@@ -208,9 +291,11 @@ def _is_web_url(url: str) -> bool:
     return parsed.scheme in ("http", "https") and bool(parsed.hostname)
 
 
-def write_site(posts: list[dict], generated_at: str, site_dir: Path) -> None:
-    """記事 ID と出典 URL はここで検査する。render_* を直接呼ぶ場合は呼び出し側で検査済みであること。"""
-    unsafe = [p["id"] for p in posts if not POST_ID_RE.fullmatch(p["id"])]
+def write_site(posts: list[dict], generated_at: str, site_dir: Path, roundups: list[dict] = ()) -> None:
+    """記事・まとめの ID と出典 URL はここで検査する。render_* を直接呼ぶ場合は呼び出し側で検査済みであること。
+    roundups は新しい順に並んでいる前提。"""
+    roundups = list(roundups)
+    unsafe = [p["id"] for p in [*posts, *roundups] if not POST_ID_RE.fullmatch(p["id"])]
     if unsafe:
         raise ValueError(f"URL に使えない記事 ID があります: {unsafe}")
     bad_urls = [p["id"] for p in posts if not _is_web_url(p["source_url"])]
@@ -218,7 +303,7 @@ def write_site(posts: list[dict], generated_at: str, site_dir: Path) -> None:
         raise ValueError(f"出典 URL が http(s) ではない記事があります: {bad_urls}")
 
     index = site_dir / "index.html"
-    index.write_text(render_index(index.read_text(encoding="utf-8"), posts, generated_at), encoding="utf-8")
+    index.write_text(render_index(index.read_text(encoding="utf-8"), posts, generated_at, roundups), encoding="utf-8")
 
     # 削除された記事のページが残らないよう、生成先を作り直す
     posts_dir = site_dir / "posts"
@@ -228,4 +313,13 @@ def write_site(posts: list[dict], generated_at: str, site_dir: Path) -> None:
         page.parent.mkdir(parents=True)
         page.write_text(render_post_page(post), encoding="utf-8")
 
-    (site_dir / "sitemap.xml").write_text(render_sitemap(posts), encoding="utf-8")
+    roundups_dir = site_dir / "roundups"
+    shutil.rmtree(roundups_dir, ignore_errors=True)
+    for roundup in roundups:
+        page = roundups_dir / roundup["id"] / "index.html"
+        page.parent.mkdir(parents=True)
+        page.write_text(render_roundup_page(roundup), encoding="utf-8")
+    if roundups:
+        (roundups_dir / "index.html").write_text(render_roundups_index(roundups), encoding="utf-8")
+
+    (site_dir / "sitemap.xml").write_text(render_sitemap(posts, roundups), encoding="utf-8")

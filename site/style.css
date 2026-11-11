@@ -342,6 +342,64 @@ button { font-family: inherit; }
 }
 .post-page .doc-back { margin-bottom: 28px; }
 
+/* ---------------- Roundups (週次まとめ) ---------------- */
+
+.roundup-banner {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel);
+  padding: 16px 20px;
+  margin-bottom: 32px;
+}
+.roundup-banner-link {
+  display: block;
+  text-decoration: none;
+}
+.roundup-banner-title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.roundup-banner-link:hover .roundup-banner-title { color: var(--accent); }
+.roundup-banner-summary {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+.roundup-banner-all {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.roundup-banner-all:hover { text-decoration: underline; }
+
+.roundup-body h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+  margin: 28px 0 6px;
+}
+.roundup-body ol { padding-left: 1.6em; }
+.roundup-body strong { color: var(--text); }
+.roundup-note {
+  font-size: 13px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+  margin-top: 48px;
+  padding-top: 16px;
+}
+.roundup-list { list-style: none; padding-left: 0; }
+.roundup-list li { margin-bottom: 20px; }
+.roundup-list a { font-weight: 600; }
+.roundup-list-summary { margin: 4px 0 0; font-size: 14px; }
+
 /* ---------------- Responsive ---------------- */
 
 @media (max-width: 860px) {

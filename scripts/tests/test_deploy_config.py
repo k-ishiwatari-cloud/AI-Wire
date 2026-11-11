@@ -70,3 +70,27 @@ def test_manifest_requires_revalidation():
 def test_previous_hosting_configs_are_removed():
     assert not (ROOT / ".github" / "workflows" / "deploy.yml").exists()
     assert not (ROOT / "netlify.toml").exists()
+
+
+def test_build_renders_roundups(tmp_path, monkeypatch):
+    import shutil
+
+    import build_manifest
+    import roundups
+
+    site = tmp_path / "site"
+    site.mkdir()
+    shutil.copy(SITE / "index.html", site / "index.html")
+    drafts = tmp_path / "roundups"
+    drafts.mkdir()
+    (drafts / "2026-w44.md").write_text(roundups.to_markdown({
+        "kind": "weekly", "title": "週次まとめ テスト", "period_start": "2026-10-26", "period_end": "2026-11-01",
+        "summary": "要約", "body": "## 見出し\n\n本文", "generated_at": "2026-11-01T22:05:00Z", "model": "m",
+    }), encoding="utf-8")
+    monkeypatch.setattr(build_manifest, "SITE_DIR", site)
+    monkeypatch.setattr(build_manifest, "OUTPUT_PATH", site / "data" / "manifest.json")
+    monkeypatch.setattr(build_manifest, "load_roundups", lambda: roundups.load_roundups(drafts))
+    build_manifest.main()
+
+    assert "<h2>見出し</h2>" in (site / "roundups" / "2026-w44" / "index.html").read_text(encoding="utf-8")
+    assert 'href="/roundups/2026-w44/"' in (site / "index.html").read_text(encoding="utf-8")
