@@ -22,7 +22,8 @@ from pathlib import Path
 from typing import Callable
 
 from build_manifest import POSTS_DIR, parse_post
-from roundup_markdown import internal_links, linked_ids, visible_length
+from news_validation import content_digest_reason
+from roundup_markdown import inline_texts, internal_links, linked_ids, visible_length
 from roundups import ROUNDUPS_DIR, parse_roundup, previous_week, to_markdown, week_range, weekly_title
 
 MODEL = os.environ.get("ROUNDUP_MODEL", "gpt-5.6-luna")
@@ -47,9 +48,21 @@ JSON で summary と body を返す。
   3. 「## {next_start} 以降の注目点」として 2〜3 個。一覧にない開催・公開・提供の予定は作らず、
      「〜の提供範囲が明らかになるか」のような確かめるべき点として書く。
 - 本文は全体で {min_chars:,}〜{max_chars:,} 字(リンク先の URL は数えない)。
-- 使える書式は「## 見出し」「### 小見出し」「- 箇条書き」「**太字**」「[記事タイトル](/posts/記事ID/)」だけ。
+- 使える書式は「## 見出し」「### 小見出し」「- 箇条書き」「**太字**」「[文中の語句](/posts/記事ID/)」だけ。
   「# 」の見出し(ページのタイトルはサイトが付ける)、表、外部サイトへのリンクは使わない。
-- 根拠にした記事は必ず [記事タイトル](/posts/記事ID/) の形でリンクする。記事 ID は一覧にあるものだけを使う。
+- 根拠にした記事へのリンクは、文中でその出来事を述べている語句に付ける。記事 ID は一覧にあるものだけを使う。
+  良い例: A社は[新しいモデルの公開](/posts/記事ID/)を発表した。
+  悪い例: A社は新しいモデルの公開を発表した。[A社が新モデルを公開](/posts/記事ID/)
+  文や段落の末尾にリンクだけを並べない。リンクだけの段落や箇条書きも作らない。
+  (例の会社名・出来事は説明のためのもので、本文には使わない)
+
+## 書き方
+- 傾向や変化を言い切らない。「〜へ広がった」「〜の段階に入った」「〜の局面に入った」「〜が加速している」
+  「〜が定着した」のような書き方をせず、今週の記事で確認できた具体的な事実と、その範囲を書く。
+  良い例: 今週掲載した記事では、A社とB社がそれぞれエージェントの接続管理の製品を発表した。
+  悪い例: エージェントは業務システムの管理対象になる段階に入った。
+- 事実から読み取れることを書く場合は、根拠の範囲を示したうえで「〜の可能性がある」「〜とみられる」を使う。
+- 「今週の要点」と summary も同じ。出来事の事実(誰が何を発表したか)は言い切ってよい。
 
 ## 守ること
 - 事実は一覧の記事に書かれていることだけを使う。一覧にない数字・固有名詞・出来事・過去との比較を足さない。
@@ -99,8 +112,12 @@ def default_week(now: datetime) -> str:
 
 
 def select_week_posts(posts: list[dict], rid: str) -> list[dict]:
+    """対象週の記事。記事そのものが他サイトのまとめのもの(削除候補)は材料にしない。"""
     start, end = week_range(rid)
-    week = [p for p in posts if start <= date.fromisoformat(p["date"]) <= end]
+    week = [
+        p for p in posts
+        if start <= date.fromisoformat(p["date"]) <= end and not content_digest_reason(p["title"], p["source_url"])
+    ]
     return sorted(week, key=lambda p: (p["date"], p["id"]))
 
 
@@ -132,11 +149,23 @@ def parse_response(text: str) -> tuple[str, str]:
 _NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)*")
 _LINK_URL_RE = re.compile(r"\]\([^)]*\)")
 _EXTERNAL_LINK_RE = re.compile(r"\]\((?:https?:)?//")
+_LINK_RE = re.compile(r"\[[^\]]+\]\([^)\s]+\)")
+# リンクを \0 に置き換えた文字列で、段落の頭か文の終わり(。)のあとに、リンクと区切りの記号しか続かない
+# (根拠を文中ではなく末尾に並べた。リンクだけの段落も含む)
+_TRAILING_LINKS_RE = re.compile(r"(?:^|[。．])[\s、,，・()（）]*\0[\s\0、,，・()（）。．]*$")
+# 傾向を言い切る言い回し。指示で避けるよう伝えているが、残っていれば確認してもらう
+_STRONG_ASSERTION_RE = re.compile(r"広がった|段階に入った|局面に入った|加速している|定着した")
+
+
+def _normalize_number(n: str) -> str:
+    """3,500 → 3500、09 → 9(日付の 2026-11-09 と 11月9日 を同じ数として扱う)。"""
+    n = n.replace(",", "")
+    return n if "." in n else str(int(n))
 
 
 def _numbers(text: str) -> set[str]:
     text = unicodedata.normalize("NFKC", text)
-    return {n.replace(",", "") for n in _NUMBER_RE.findall(text)}
+    return {_normalize_number(n) for n in _NUMBER_RE.findall(text)}
 
 
 def _unsourced_numbers(body: str, sources: list[dict], rid: str) -> list[str]:
@@ -170,7 +199,11 @@ def check_roundup(summary: str, body: str, week_posts: list[dict], all_posts: li
     unknown = [i for i in ids if i not in known]
     if unknown:
         errors.append(f"存在しない記事へのリンクがあります: {unknown}")
-    outside = [i for i in ids if i in known and i not in week_ids]
+    by_id = {p["id"]: p for p in all_posts}
+    digests = [i for i in ids if i in by_id and content_digest_reason(by_id[i]["title"], by_id[i]["source_url"])]
+    if digests:
+        errors.append(f"他サイトのまとめにあたる記事は根拠に使えません: {digests}")
+    outside = [i for i in ids if i in known and i not in week_ids and i not in digests]
     if outside:
         warnings.append(f"対象週以外の記事にリンクしています: {outside}")
 
@@ -183,6 +216,11 @@ def check_roundup(summary: str, body: str, week_posts: list[dict], all_posts: li
         warnings.append("外部サイトへのリンクがあります。リンク先が正しいか確認してください")
     if len(summary) > 160:
         warnings.append(f"要約が {len(summary)} 字です(目安は 120 字以内)")
+    trailing = sum(1 for part in inline_texts(body) if _TRAILING_LINKS_RE.search(_LINK_RE.sub("\0", part)))
+    if trailing:
+        warnings.append(f"文の末尾にリンクだけを並べた段落が {trailing} か所あります(リンクは文中の語句に付ける)")
+    if strong := sorted({m.group(0) for m in _STRONG_ASSERTION_RE.finditer(f"{summary}\n{body}")}):
+        warnings.append(f"傾向を言い切る言い回しがあります(控えめな表現にできないか確認してください): {', '.join(strong)}")
 
     sources = [p for p in all_posts if p["id"] in week_ids | set(ids)]
     if numbers := _unsourced_numbers(f"{summary}\n{body}", sources, rid):

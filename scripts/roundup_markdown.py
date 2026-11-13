@@ -103,14 +103,15 @@ def render_markdown(text: str) -> str:
     return "\n".join(html)
 
 
-def _inline_texts(text: str) -> list[str]:
+def inline_texts(text: str) -> list[str]:
+    """見出し・段落・箇条書きの項目ごとの文字列(描画と同じ分割)。"""
     return [part for _, parts in _blocks(text) for part in parts]
 
 
 def internal_links(text: str) -> list[tuple[str, str]]:
     """本文のサイト内リンク (posts または roundups, ID)。重複を除き、出てきた順。"""
     links: list[tuple[str, str]] = []
-    for part in _inline_texts(text):
+    for part in inline_texts(text):
         for match in _INLINE_RE.finditer(part):
             if match.group(2) and (link := _internal_link(match.group(2))) and link not in links:
                 links.append(link)
@@ -124,5 +125,5 @@ def linked_ids(text: str) -> list[str]:
 
 def visible_length(text: str) -> int:
     """読者に見える文字数。リンク先の URL・Markdown の記号・空白は数えない。"""
-    plain = "".join(_INLINE_RE.sub(lambda m: m.group(1) or m.group(3), part) for part in _inline_texts(text))
+    plain = "".join(_INLINE_RE.sub(lambda m: m.group(1) or m.group(3), part) for part in inline_texts(text))
     return len(re.sub(r"\s", "", plain))

@@ -89,15 +89,15 @@ def find_similar_title(
 # ニュースが少ない時間帯に、AI が他サイトの日次・週次まとめを 1 本の記事として拾ってしまう。
 # 二次情報のさらに二次情報で価値が低いので載せない(AI WIRE のまとめは自サイトの記事から作る)。
 _DIGEST_TITLE_RE = re.compile(
-    r"ダイジェスト|デイリー|日次まとめ|週次まとめ|日次AI|週次AI|日次ブリーフ|週次ブリーフ|"
+    r"ダイジェスト|デイリー|日次まとめ|週次まとめ|総合まとめ|日次AI|週次AI|日次ブリーフ|週次ブリーフ|"
     r"ニュースレター|recap|roundup|round-up|digest|briefing",
     re.IGNORECASE,
 )
-# 「概況」「短報」「総覧」は単一のニュースの報道にも使われるので、期間を示す語と組み合わさったときだけ数える
 # 機能名にも使われる語(「業界要約」機能など)。見出しの頭のラベルのときだけまとめとみなす
 _LABEL_DIGEST_TITLE_RE = re.compile(
-    r"^(?:[^「」『』【】]{0,10}?|[【「『])(業界要約|週刊まとめ|今週のAIニュース)(?:[】」』：:（(]|$)"
+    r"^(?:[^「」『』【】]{0,10}?|[【「『])(業界要約|業界まとめ|週刊まとめ|今週のAIニュース)(?:[】」』：:（(]|$)"
 )
+# 「概況」「短報」「総覧」は単一のニュースの報道にも使われるので、期間を示す語と組み合わさったときだけ数える
 _WEAK_DIGEST_TITLE_RE = re.compile(r"概況|短報|総覧")
 _PERIOD_RE = re.compile(r"日次|週次|週末|月次|\d{1,2}/\d{1,2}|\d{1,2}月\d{1,2}日")
 # URL のパスの 1 区切り(/ と / の間)全体がこれらの語なら、まとめのページ。
@@ -119,17 +119,34 @@ _DATE_PAGE_HOSTS = {"getyourbrief.com", "aidr.today", "explainx.ai"}
 _DATE_ONLY_SEGMENT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
-def digest_reason(title: str, url: str) -> str | None:
-    """他サイトのまとめ(日次・週次のダイジェスト、ニュースレター、トップページ、記事一覧)を指す記事候補なら、
-    その判定理由。該当しなければ None。形式不正の URL は到達確認で落とすので、ここでは None を返す。"""
+# パスがこれだけなら、言語別のトップページ(例: https://ai.zhudong.net/en/)
+_LANGUAGE_SEGMENTS = {
+    "en", "ja", "jp", "zh", "cn", "tw", "ko", "kr", "de", "fr", "es", "it", "pt", "ru", "ar",
+    "en-us", "en-gb", "ja-jp", "zh-cn", "zh-tw", "zh-hans", "zh-hant", "ko-kr",
+}
+
+
+def _url_parts(url: str) -> tuple[str, list[str]] | None:
+    """(ホスト名, パスの区切り)。形式不正なら None。"""
     try:
         parts = urlsplit(url)
         path = unquote(parts.path)
         host = (parts.hostname or "").removeprefix("www.")
     except ValueError:
         return None
-    segments = [s for s in path.lower().split("/") if s]
-    if not segments:
+    return host, [s for s in path.lower().split("/") if s]
+
+
+def content_digest_reason(title: str, url: str) -> str | None:
+    """記事そのものがまとめ(見出しがまとめ、または出典がトップページで中身を確かめられない)なら、その判定理由。
+
+    出典が記事一覧や日付のページでも、中身が個別のニュースなら None(digest_reason では除外される)。
+    AI WIRE の週次まとめの材料を選ぶのに使う。"""
+    parts = _url_parts(url)
+    if parts is None:
+        return None
+    _, segments = parts
+    if not segments or (len(segments) == 1 and segments[0] in _LANGUAGE_SEGMENTS):
         return "トップページ"
     if match := _DIGEST_TITLE_RE.search(title):
         return f"タイトルの語「{match.group(0)}」"
@@ -137,6 +154,18 @@ def digest_reason(title: str, url: str) -> str | None:
         return f"タイトルの語「{match.group(1)}」"
     if (match := _WEAK_DIGEST_TITLE_RE.search(title)) and (period := _PERIOD_RE.search(title)):
         return f"タイトルの語「{match.group(0)}」「{period.group(0)}」"
+    return None
+
+
+def digest_reason(title: str, url: str) -> str | None:
+    """他サイトのまとめ(日次・週次のダイジェスト、ニュースレター、トップページ、記事一覧)を指す記事候補なら、
+    その判定理由。該当しなければ None。形式不正の URL は到達確認で落とすので、ここでは None を返す。"""
+    if reason := content_digest_reason(title, url):
+        return reason
+    parts = _url_parts(url)
+    if parts is None:
+        return None
+    host, segments = parts
     for s in segments:
         if s in _DIGEST_PATH_SEGMENTS or _DIGEST_SEGMENT_RE.search(s):
             return f"URL のパス「{s}」"

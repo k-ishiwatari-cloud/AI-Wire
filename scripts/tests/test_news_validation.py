@@ -12,6 +12,7 @@ from news_validation import (
     find_similar_title,
     is_cited,
     normalize_url,
+    content_digest_reason,
     digest_reason,
     is_digest,
     title_similarity,
@@ -303,9 +304,26 @@ def test_blocked_redirect_closes_response():
     ("【週刊まとめ】新モデル発表と規制動向", "https://example.com/news/1"),
     ("「今週のAIニュース」：新モデル発表と規制動向", "https://example.com/news/1"),
     ("0123456789業界要約：見出しの頭から10字まではラベル", "https://example.com/news/1"),
+    ("業界まとめ：最近のAI製品・モデルの商用化動向（短報）", "https://example.com/news/1"),
+    ("OpenAIの説明資料と外部報道の総合まとめ", "https://example.com/news/1"),
+    # 言語だけのパスはトップページ
+    ("AI動画・生成メディア分野での商用採用とコスト低下の潮流", "https://ai.zhudong.net/en/"),
+    ("通常の見出し", "https://example.com/ja-jp/"),
 ])
 def test_digests_of_other_curation_sites_are_detected(title, url):
     assert is_digest(title, url)
+
+
+@pytest.mark.parametrize("title, url, expected", [
+    ("業界まとめ：最近のAI製品の商用化動向", "https://example.com/news/1", True),   # 見出しがまとめ
+    ("通常の見出し", "https://ai.zhudong.net/en/", True),                         # 出典がトップページ
+    ("OpenAIがGPT-6.1を公開", "https://openai.com/news/", False),                  # 一覧ページでも中身は個別のニュース
+    ("通常の見出し", "https://getyourbrief.com/ai/2026-10-30", False),             # 日付のページでも中身は個別のニュース
+    ("通常の見出し", "https://example.com/news/1", False),
+])
+def test_content_digest_reason_only_flags_articles_that_are_roundups_themselves(title, url, expected):
+    """まとめ記事の材料から外すのは、記事そのものがまとめ(か、トップページで中身を確かめられない)ものだけ。"""
+    assert (content_digest_reason(title, url) is not None) is expected
 
 
 @pytest.mark.parametrize("title, url", [
