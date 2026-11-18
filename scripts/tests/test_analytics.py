@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 SITE = Path(__file__).resolve().parents[2] / "site"
-PAGES = ("index.html", "privacy.html", "404.html")
+PAGES = ("index.html", "privacy.html", "about.html", "404.html")
 MEASUREMENT_ID = "G-F59NHKG7G0"
 
 # 同意が必要な地域: EEA(EU27 + アイスランド・リヒテンシュタイン・ノルウェー)、英国、スイス

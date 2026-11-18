@@ -176,12 +176,29 @@ def test_post_page_is_standalone_and_uses_absolute_paths():
     assert 'href="/"' in html and 'href="/privacy"' in html
 
 
+def test_post_page_is_noindex_but_links_are_followed():
+    """個別記事は短い要約なので検索結果に出さない。ページ内のリンクはたどってよい。"""
+    html = render_site.render_post_page(_post())
+    head = html[html.index("<head>"):html.index("</head>")]
+    assert '<meta name="robots" content="noindex, follow">' in head
+
+
+def test_roundup_pages_stay_indexable():
+    for html in (render_site.render_roundup_page(_roundup()), render_site.render_roundups_index([_roundup()])):
+        assert "noindex" not in html
+
+
+def test_footer_links_to_about_and_privacy():
+    html = render_site.render_post_page(_post())
+    assert 'href="/about"' in html and 'href="/privacy"' in html
+
+
 def test_post_page_has_same_tags_as_other_pages():
-    """解析・広告・アイコンは既存ページと同じものを読み込む。"""
+    """解析・アイコンは既存ページと同じものを読み込む(広告は出さない。test_adsense を参照)。"""
     html = render_site.render_post_page(_post())
     index = (SITE / "index.html").read_text(encoding="utf-8")
     for tag in re.findall(r"<(?:script|link)\b[^>]*>", index):
-        if 'rel="canonical"' in tag:
+        if 'rel="canonical"' in tag or "adsbygoogle" in tag:
             continue
         tag =tag.replace('href="style.css"', 'href="/style.css"').replace('src="app.js"', 'src="/app.js"')
         assert tag in html, tag
@@ -197,17 +214,25 @@ def test_post_page_shows_the_card_in_a_date_group():
 
 # ---------------- sitemap ----------------
 
-def test_sitemap_lists_top_privacy_and_every_post():
-    xml = render_site.render_sitemap([_post(id="a", date="2026-10-29"), _post(id="b", date="2026-10-28")])
+def test_sitemap_lists_fixed_pages_but_not_posts():
+    """個別記事は要約と出典リンクだけの短いページなので、検索の対象(sitemap)から外す。"""
+    xml = render_site.render_sitemap()
     assert xml.startswith('<?xml version="1.0" encoding="UTF-8"?>')
     locs = re.findall(r"<loc>([^<]+)</loc>", xml)
     assert locs == [
         "https://ai-wire.site/",
+        "https://ai-wire.site/about",
         "https://ai-wire.site/privacy",
-        "https://ai-wire.site/posts/a/",
-        "https://ai-wire.site/posts/b/",
     ]
     assert "<lastmod>" not in xml  # 記事の更新日時を管理していないため、不正確な lastmod は出さない
+
+
+def test_write_site_sitemap_has_no_post_urls(tmp_path):
+    site = _site_copy(tmp_path)
+    render_site.write_site([_post(id="a")], "2026-10-29T11:05:00Z", site, [_roundup(id="2026-w44")])
+    xml = (site / "sitemap.xml").read_text(encoding="utf-8")
+    assert "/posts/" not in xml
+    assert "https://ai-wire.site/roundups/2026-w44/" in xml
 
 
 def test_robots_txt_points_to_sitemap():
@@ -309,7 +334,7 @@ def test_roundup_page_renders_title_body_and_metadata():
     assert "<h1>週次まとめ 2026年10月26日〜11月1日</h1>" in html
     assert '<h2>テーマ</h2>' in html
     assert '<a href="/posts/2026-10-26-gennai/">源内</a>' in html
-    assert render_site.HEAD_ASSETS in html
+    assert render_site.HEAD_ASSETS in html and render_site.ADSENSE_TAG in html
 
 
 def test_roundup_page_says_it_was_written_by_ai_from_site_articles():
@@ -344,10 +369,10 @@ def test_index_template_has_roundup_marker():
     assert "<!-- build:roundup -->" in template and "<!-- /build:roundup -->" in template
 
 
-def test_sitemap_lists_roundups_after_posts():
-    xml = render_site.render_sitemap([_post(id="a")], [_roundup(id="2026-w44")])
+def test_sitemap_lists_roundups_after_fixed_pages():
+    xml = render_site.render_sitemap([_roundup(id="2026-w44")])
     assert re.findall(r"<loc>([^<]+)</loc>", xml)[-3:] == [
-        "https://ai-wire.site/posts/a/",
+        "https://ai-wire.site/privacy",
         "https://ai-wire.site/roundups/",
         "https://ai-wire.site/roundups/2026-w44/",
     ]

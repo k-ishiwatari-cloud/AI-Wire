@@ -33,12 +33,14 @@ ai-news-site/
 │   ├── index.html
 │   ├── style.css
 │   ├── app.js                      # タグ絞り込み・NEW表示(記事の描画はビルド時)
+│   ├── about.html                  # 運営者情報(サイトの目的・記事の作り方・問い合わせ先)
+│   ├── privacy.html                # プライバシーポリシー
 │   ├── _headers                    # レスポンスヘッダ設定(公開はされない)
 │   ├── _redirects                  # 統合で消した記事の転送設定(公開はされない)
 │   ├── data/manifest.json          # ビルド時に自動生成(手動編集不要)
 │   ├── posts/<記事ID>/index.html   # ビルド時に自動生成(git管理外)
 │   ├── roundups/<まとめID>/index.html # ビルド時に自動生成(git管理外)
-│   └── sitemap.xml                 # ビルド時に自動生成(git管理外)
+│   └── sitemap.xml                 # ビルド時に自動生成(git管理外)。個別記事は noindex なので載せない
 ├── aiwire-icons/                   # ロゴ・ファビコンの元データ(公開用は site/ にコピー済み)
 ├── chatgpt-agent/
 │   ├── draft-prompt-template.md    # 通常のChatGPTに貼り付ける記事作成プロンプト

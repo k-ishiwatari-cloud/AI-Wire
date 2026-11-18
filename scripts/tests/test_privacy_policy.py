@@ -97,3 +97,11 @@ def test_explains_consent_mode_behavior_for_analytics():
     ga = html[html.index("Google Analytics"):html.index("5. 利用者情報の外部送信")]
     assert "欧州経済領域" in ga
     assert "Cookie を使用しない" in ga
+
+
+def test_disclaimer_matches_how_articles_are_published():
+    """個別記事は bot が自動で公開している。公開前に運営者が確認しているとは書かない。"""
+    html = _html()
+    disclaimer = html[html.index("6. 掲載内容について"):html.index("7. お問い合わせ")]
+    assert "確認したうえで掲載" not in disclaimer
+    assert "自動" in disclaimer

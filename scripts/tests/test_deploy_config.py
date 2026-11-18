@@ -53,6 +53,16 @@ def test_build_generates_manifest_from_posts(tmp_path, monkeypatch):
     assert len(list((site / "posts").glob("*/index.html"))) == post_count
     assert (site / "index.html").read_text(encoding="utf-8").count('<article class="card"') == post_count
 
+    # 個別記事はすべて noindex、まとめは検索の対象のまま。sitemap には記事を載せない
+    noindex = '<meta name="robots" content="noindex, follow">'
+    assert all(noindex in p.read_text(encoding="utf-8") for p in (site / "posts").glob("*/index.html"))
+    roundup_pages = list((site / "roundups").glob("**/index.html"))
+    assert roundup_pages and not any("noindex" in p.read_text(encoding="utf-8") for p in roundup_pages)
+    sitemap = (site / "sitemap.xml").read_text(encoding="utf-8")
+    assert "/posts/" not in sitemap
+    for path in ("/about", "/privacy", "/roundups/"):
+        assert f"<loc>https://ai-wire.site{path}</loc>" in sitemap, path
+
 
 def test_readme_documents_cloudflare_build_settings():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")

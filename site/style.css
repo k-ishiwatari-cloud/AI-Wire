@@ -121,6 +121,9 @@ button { font-family: inherit; }
 /* ---------------- Site footer ---------------- */
 
 .site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
   margin-top: 48px;
   padding-top: 16px;
   border-top: 1px solid var(--border);

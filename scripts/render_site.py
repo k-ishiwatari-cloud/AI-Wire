@@ -26,7 +26,7 @@ JST = timezone(timedelta(hours=9))
 POST_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SUMMARY_PREVIEW_CHARS = 15  # トップのカードに出す要約の文字数
 
-# 記事ページの <head>。index.html / privacy.html と同じ解析・広告・アイコンを読み込む(パスは絶対パス)。
+# 生成するページの <head>。index.html / privacy.html / about.html と同じ解析・アイコンを読み込む(パスは絶対パス)。
 HEAD_ASSETS = """\
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -37,15 +37,23 @@ HEAD_ASSETS = """\
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/style.css">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7300454039947562"
+<link rel="stylesheet" href="/style.css">"""
+
+# 広告は、人が確認したまとめの本文と固定ページにだけ出す(_page は既定で広告なし。出すページだけ ads=True)。
+# 個別記事は人の確認なしに自動で公開する短い要約、まとめ一覧は案内だけのページなので、広告を出さない。
+ADSENSE_TAG = """<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7300454039947562"
      crossorigin="anonymous"></script>"""
 
 
 FOOTER = """\
   <footer class="site-footer">
+    <a href="/about">AI WIRE について</a>
     <a href="/privacy">プライバシーポリシー</a>
   </footer>"""
+
+# 個別記事は要約と出典リンクだけの短いページなので、検索結果に出さない(ページ内のリンクはたどってよい)。
+# 検索の対象は、トップ・まとめ・運営者情報などのページにする。
+NOINDEX = '<meta name="robots" content="noindex, follow">\n'
 
 
 def post_path(post: dict) -> str:
@@ -197,10 +205,11 @@ def render_post_page(post: dict) -> str:
 
 {FOOTER}
 </main>"""
-    return _page(post["title"], post["summary"], post_path(post), main)
+    return _page(post["title"], post["summary"], post_path(post), main, robots=NOINDEX)
 
 
-def _page(title: str, description: str, path: str, main: str) -> str:
+def _page(title: str, description: str, path: str, main: str, robots: str = "", ads: bool = False) -> str:
+    head_assets = f"{HEAD_ASSETS}\n{ADSENSE_TAG}" if ads else HEAD_ASSETS
     return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -209,7 +218,7 @@ def _page(title: str, description: str, path: str, main: str) -> str:
 <title>{escape(title)} — AI WIRE</title>
 <meta name="description" content="{escape(description)}">
 <link rel="canonical" href="{BASE_URL}{path}">
-{HEAD_ASSETS}
+{robots}{head_assets}
 </head>
 <body>
 
@@ -243,7 +252,7 @@ def render_roundup_page(roundup: dict) -> str:
 
 {FOOTER}
 </main>"""
-    return _page(roundup["title"], roundup["summary"], roundup_path(roundup), main)
+    return _page(roundup["title"], roundup["summary"], roundup_path(roundup), main, ads=True)
 
 
 def render_roundups_index(roundups: list[dict]) -> str:
@@ -268,8 +277,9 @@ def render_roundups_index(roundups: list[dict]) -> str:
     return _page("まとめ一覧", "AI WIRE の週次まとめの一覧です。", "/roundups/", main)
 
 
-def render_sitemap(posts: list[dict], roundups: list[dict] = ()) -> str:
-    """記事の更新日時は管理していないので lastmod は出さない(ニュースの日付は更新日時ではない)。"""
+def render_sitemap(roundups: list[dict] = ()) -> str:
+    """個別記事は noindex なので載せない。
+    更新日時は管理していないので lastmod は出さない(ニュースの日付は更新日時ではない)。"""
     def url(path: str) -> str:
         return f"  <url><loc>{BASE_URL}{path}</loc></url>"
 
@@ -277,8 +287,8 @@ def render_sitemap(posts: list[dict], roundups: list[dict] = ()) -> str:
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
         url("/"),
+        url("/about"),
         url("/privacy"),
-        *(url(post_path(p)) for p in posts),
         *([url("/roundups/")] if roundups else []),
         *(url(roundup_path(r)) for r in roundups),
         "</urlset>",
@@ -322,4 +332,4 @@ def write_site(posts: list[dict], generated_at: str, site_dir: Path, roundups: l
     if roundups:
         (roundups_dir / "index.html").write_text(render_roundups_index(roundups), encoding="utf-8")
 
-    (site_dir / "sitemap.xml").write_text(render_sitemap(posts, roundups), encoding="utf-8")
+    (site_dir / "sitemap.xml").write_text(render_sitemap(roundups), encoding="utf-8")
