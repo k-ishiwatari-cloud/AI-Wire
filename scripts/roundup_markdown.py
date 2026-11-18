@@ -108,6 +108,11 @@ def inline_texts(text: str) -> list[str]:
     return [part for _, parts in _blocks(text) for part in parts]
 
 
+def content_texts(text: str) -> list[str]:
+    """段落と箇条書きの項目ごとの文字列(見出しを除く。描画と同じ分割)。"""
+    return [part for tag, parts in _blocks(text) if tag in ("p", "ul", "ol") for part in parts]
+
+
 def internal_links(text: str) -> list[tuple[str, str]]:
     """本文のサイト内リンク (posts または roundups, ID)。重複を除き、出てきた順。"""
     links: list[tuple[str, str]] = []
@@ -121,6 +126,45 @@ def internal_links(text: str) -> list[tuple[str, str]]:
 def linked_ids(text: str) -> list[str]:
     """本文からリンクしている記事 ID(重複を除き、出てきた順)。"""
     return [i for kind, i in internal_links(text) if kind == "posts"]
+
+
+def sections(text: str) -> list[tuple[str, str]]:
+    """## 見出しごとの (見出し, 本文の Markdown)。トップにまとめの抜粋を出すのに使う。
+    最初の ## より前の文章と、「# 見出し」から次の ## までの文章は、どの節にも入れない。"""
+    result: list[tuple[str, list[str]]] = []
+    current: list[str] | None = None
+    for raw in text.splitlines():
+        match = _HEADING_RE.match(raw.strip())
+        if match and len(match.group(1)) == 2:
+            current = []
+            result.append((match.group(2), current))
+        elif match and len(match.group(1)) == 1:
+            current = None
+        elif current is not None:
+            current.append(raw)
+    return [(heading, "\n".join(lines).strip()) for heading, lines in result]
+
+
+def first_section(text: str) -> tuple[str, str] | None:
+    """最初の ## 節(週次まとめでは「今週の要点」)。"""
+    found = sections(text)
+    return found[0] if found else None
+
+
+def render_first_block(text: str) -> str:
+    """見出しでない最初のブロック(段落 1 つ、または箇条書き 1 つ)だけを HTML にする。本文と同じ分割を使う。"""
+    for tag, parts in _blocks(text):
+        if tag in ("ul", "ol"):
+            lis = "\n".join(f"<li>{_inline(item)}</li>" for item in parts)
+            return f"<{tag}>\n{lis}\n</{tag}>"
+        if tag == "p":
+            return f"<p>{_inline(parts[0])}</p>"
+    return ""
+
+
+def render_inline(text: str) -> str:
+    """見出しなど 1 行の文字列を、本文と同じ規則(太字・リンク・エスケープ)で HTML にする。"""
+    return _inline(text)
 
 
 def visible_length(text: str) -> int:

@@ -30,7 +30,8 @@ ai-news-site/
 │   ├── publish_post.py             # ローカルの記事ファイルをGitHubへ直接投稿
 │   └── tests/                      # pytest
 ├── site/                           # Cloudflare Pagesで公開される実体
-│   ├── index.html
+│   ├── index.html                  # トップ(週次まとめが中心。広告あり・検索対象)
+│   ├── news.html                   # 日々の速報の一覧 /news(広告なし・noindex)
 │   ├── style.css
 │   ├── app.js                      # タグ絞り込み・NEW表示(記事の描画はビルド時)
 │   ├── about.html                  # 運営者情報(サイトの目的・記事の作り方・問い合わせ先)
@@ -169,9 +170,9 @@ pip install pyyaml
 python3 scripts/build_manifest.py
 ```
 
-ビルドは `site/index.html` の `<!-- build:... -->` の目印の間に記事一覧を書き込みます。
-手元でビルドすると `site/index.html` に差分が出ますが、コミットしないでください
-(`git checkout site/index.html` で元に戻せます。本番では Cloudflare のビルドが毎回書き込みます)。
+ビルドは `site/index.html`(まとめ)と `site/news.html`(速報の一覧)の `<!-- build:... -->` の目印の間に書き込みます。
+手元でビルドすると両ファイルに差分が出ますが、コミットしないでください
+(`git checkout site/index.html site/news.html` で元に戻せます。本番では Cloudflare のビルドが毎回書き込みます)。
 
 ## 完全自動投稿(news_bot.yml)
 
@@ -203,13 +204,17 @@ GitHub Actionsワークフローです。
 ## 週次まとめ(weekly_roundup.yml)
 
 毎週月曜 7:00(日本時間)に、先週(月〜日)の記事から週次まとめの下書きを作り、PR にします。
-人が確認して Merge すると `/roundups/<週ID>/` に公開され、トップページに最新のまとめが出ます。
+人が確認して Merge すると `/roundups/<週ID>/` に公開され、トップページに最新のまとめ
+(今週の要点と、各テーマの見出し・冒頭の段落)が出ます。
 
 - `scripts/generate_roundup.py` が `content/posts/` の記事のタイトルと要約だけを材料に
   OpenAI API(既定は `gpt-5.6-luna`。環境変数 `ROUNDUP_MODEL` で変更可)で下書きを書かせ、
   `content/roundups/<週ID>.md`(例: `2026-w44.md`)に書き出す。Web 検索は使わない
 - 下書きは機械的に検査する。存在しない記事へのリンク・リンクなし・空の本文は書き直させ(1 回まで)、
   文字数・外部リンク・材料に見当たらない数字などは PR の本文に確認項目として載せる
+- PR の本文の「出典で確かめてほしい箇所」には、数字を含む文と、その文が根拠にしている記事の出典(元の発表・報道)を並べる。
+  公開前に元の発表・報道で数字・日付・条件を確かめる
+- まとめのページの末尾には、本文がリンクした記事と、その出典の一覧(「このまとめの出典」)を記事のデータから書き出す
 - 本文で使える書式は `##`/`###` の見出し、箇条書き、段落、太字、リンクだけ(`scripts/roundup_markdown.py`)。
   それ以外はすべて文字としてエスケープされる
 - 手動実行も可能(Actions タブから `workflow_dispatch`。`week` に `2026-w44` のように週を指定できる)

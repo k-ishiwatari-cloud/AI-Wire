@@ -22,8 +22,8 @@ from pathlib import Path
 from typing import Callable
 
 from build_manifest import POSTS_DIR, parse_post
-from news_validation import content_digest_reason
-from roundup_markdown import inline_texts, internal_links, linked_ids, visible_length
+from news_validation import roundup_source_reason
+from roundup_markdown import content_texts, inline_texts, internal_links, linked_ids, visible_length
 from roundups import ROUNDUPS_DIR, parse_roundup, previous_week, to_markdown, week_range, weekly_title
 
 MODEL = os.environ.get("ROUNDUP_MODEL", "gpt-5.6-luna")
@@ -112,11 +112,12 @@ def default_week(now: datetime) -> str:
 
 
 def select_week_posts(posts: list[dict], rid: str) -> list[dict]:
-    """対象週の記事。記事そのものが他サイトのまとめのもの(削除候補)は材料にしない。"""
+    """対象週の記事。記事そのものが他サイトのまとめのものと、出典が他サイトのまとめのページで
+    元の発表・報道を確かめられないものは材料にしない。"""
     start, end = week_range(rid)
     week = [
         p for p in posts
-        if start <= date.fromisoformat(p["date"]) <= end and not content_digest_reason(p["title"], p["source_url"])
+        if start <= date.fromisoformat(p["date"]) <= end and not roundup_source_reason(p["title"], p["source_url"])
     ]
     return sorted(week, key=lambda p: (p["date"], p["id"]))
 
@@ -178,6 +179,78 @@ def _unsourced_numbers(body: str, sources: list[dict], rid: str) -> list[str]:
     return sorted(n for n in found - known if len(n.replace(".", "")) >= 2)
 
 
+_LINK_LABEL_RE = re.compile(r"\[([^\]]+)\]\([^)\s]+\)")
+_SENTENCE_END = "。！？!?"
+
+FactCheckItem = tuple[str, list[str], list[tuple[str, str]], bool]  # (文, 数字, [(出典名, 出典 URL)], 文の中のリンクか)
+
+
+def _sentences(part: str) -> list[str]:
+    """文に分ける。リンクはひとかたまりとして扱い、リンクの文字列の中の「。」では分けない。"""
+    sentences, current, pos = [], "", 0
+    for match in _LINK_LABEL_RE.finditer(part):
+        for ch in part[pos:match.start()]:
+            current += ch
+            if ch in _SENTENCE_END:
+                sentences.append(current)
+                current = ""
+        current += match.group(0)
+        pos = match.end()
+    for ch in part[pos:]:
+        current += ch
+        if ch in _SENTENCE_END:
+            sentences.append(current)
+            current = ""
+    return [s for s in [*sentences, current] if s.strip()]
+
+
+def _plain(text: str) -> str:
+    return _LINK_LABEL_RE.sub(r"\1", text).replace("**", "").strip()
+
+
+def _numbers_in(text: str) -> list[str]:
+    """2 桁以上の数字(書かれたとおり)。リンク先の URL は除いた文字列に使う。"""
+    found = [n for n in _NUMBER_RE.findall(unicodedata.normalize("NFKC", text)) if len(re.sub(r"\D", "", n)) >= 2]
+    return list(dict.fromkeys(found))
+
+
+def fact_check_items(body: str, posts: list[dict]) -> list[FactCheckItem]:
+    """数字(2 桁以上)を含む文と、その文が根拠にしている記事の出典。人が元の発表・報道で確かめるための一覧。
+    文の中にリンクがなければ、同じ段落・項目のリンクを参考として出す(最後の要素が False)。"""
+    by_id = {p["id"]: p for p in posts}
+
+    def sources(ids: list[str]) -> list[tuple[str, str]]:
+        found = [(by_id[i]["source_name"], by_id[i]["source_url"]) for i in ids if i in by_id]
+        return list(dict.fromkeys(found))
+
+    items: list[FactCheckItem] = []
+    for part in content_texts(body):
+        block_ids = linked_ids(part)
+        for sentence in _sentences(part):
+            plain = _plain(sentence)
+            if numbers := _numbers_in(plain):
+                own = linked_ids(sentence)
+                items.append((plain, numbers, sources(own or block_ids), bool(own)))
+    return items
+
+
+def _fact_check_lines(roundup: dict, posts: list[dict]) -> list[str]:
+    lines = []
+    for sentence in map(_plain, _sentences(roundup["summary"])):
+        if numbers := _numbers_in(sentence):  # 要約にはリンクがないので、本文の該当箇所の出典で確かめてもらう
+            lines.append(f"- [ ] (要約){sentence}({', '.join(numbers)})— 本文の該当箇所の出典で確かめる")
+    for sentence, numbers, srcs, own in fact_check_items(roundup["body"], posts):
+        cited = ", ".join(f"[{name}]({url})" for name, url in srcs)
+        if not cited:
+            cited = "出典のリンクなし"
+        elif not own:
+            cited = f"同じ段落の記事の出典: {cited}"
+        lines.append(f"- [ ] {sentence}({', '.join(numbers)})— {cited}")
+    if not lines:
+        return ["数字を含む文はありませんでした。"]
+    return ["数字を含む文と、その文が根拠にしている記事の出典です。元の発表・報道で、数字・日付・条件が合っているか確かめてください。", "", *lines]
+
+
 def check_roundup(summary: str, body: str, week_posts: list[dict], all_posts: list[dict],
                   rid: str) -> tuple[list[str], list[str]]:
     """(公開できない問題, 確認してほしい点)。"""
@@ -200,9 +273,9 @@ def check_roundup(summary: str, body: str, week_posts: list[dict], all_posts: li
     if unknown:
         errors.append(f"存在しない記事へのリンクがあります: {unknown}")
     by_id = {p["id"]: p for p in all_posts}
-    digests = [i for i in ids if i in by_id and content_digest_reason(by_id[i]["title"], by_id[i]["source_url"])]
+    digests = [i for i in ids if i in by_id and roundup_source_reason(by_id[i]["title"], by_id[i]["source_url"])]
     if digests:
-        errors.append(f"他サイトのまとめにあたる記事は根拠に使えません: {digests}")
+        errors.append(f"他サイトのまとめにあたる記事・まとめのページが出典の記事は根拠に使えません: {digests}")
     outside = [i for i in ids if i in known and i not in week_ids and i not in digests]
     if outside:
         warnings.append(f"対象週以外の記事にリンクしています: {outside}")
@@ -282,7 +355,9 @@ def build_roundup(rid: str, summary: str, body: str, generated_at: str) -> dict:
     }
 
 
-def render_report(roundup: dict, week_posts: list[dict], warnings: list[str], attempts: int) -> str:
+def render_report(roundup: dict, week_posts: list[dict], warnings: list[str], attempts: int,
+                  all_posts: list[dict] | None = None) -> str:
+    """all_posts は出典を引くための記事一覧(対象週以外へのリンクの出典も出すため)。省略すると対象週の記事だけ。"""
     linked = set(linked_ids(roundup["body"]))
     used = sum(1 for p in week_posts if p["id"] in linked)
     lines = [
@@ -297,11 +372,17 @@ def render_report(roundup: dict, week_posts: list[dict], warnings: list[str], at
         "",
         *([f"- [ ] {w}" for w in warnings] or ["機械的な検査で気になる点はありませんでした。"]),
         "",
+        "### 出典で確かめてほしい箇所",
+        "",
+        *_fact_check_lines(roundup, all_posts if all_posts is not None else week_posts),
+        "",
         "### 公開の手順",
         "",
         "1. Cloudflare Pages のプレビュー(このページの下に付く URL)で `/roundups/` を開いて読む",
-        "2. 直す場合は、Files changed からファイルを編集してコミットする",
-        "3. 問題なければ Merge する(公開される)。公開しない場合は Close する",
+        "2. 「出典で確かめてほしい箇所」を、リンク先の元の発表・報道で確かめる"
+        "(この一覧は PR を作った時点の下書きのもの。直したあとは、プレビューの最新版の文で確かめる)",
+        "3. 直す場合は、Files changed からファイルを編集してコミットする",
+        "4. 問題なければ Merge する(公開される)。公開しない場合は Close する",
     ]
     return "\n".join(lines) + "\n"
 
@@ -325,7 +406,7 @@ def run(rid: str, all_posts: list[dict], writer: Writer, *, roundups_dir: Path =
     roundups_dir.mkdir(parents=True, exist_ok=True)
     path.write_text(to_markdown(roundup), encoding="utf-8", newline="\n")
     if report_path:
-        report_path.write_text(render_report(roundup, week_posts, warnings, attempts), encoding="utf-8")
+        report_path.write_text(render_report(roundup, week_posts, warnings, attempts, all_posts), encoding="utf-8")
     return path
 
 
@@ -334,7 +415,7 @@ def report_for_existing(path: Path, all_posts: list[dict]) -> str:
     roundup = parse_roundup(path)
     week_posts = select_week_posts(all_posts, roundup["id"])
     errors, warnings = check_roundup(roundup["summary"], roundup["body"], week_posts, all_posts, roundup["id"])
-    return render_report(roundup, week_posts, errors + warnings, attempts=1)
+    return render_report(roundup, week_posts, errors + warnings, attempts=1, all_posts=all_posts)
 
 
 def main() -> None:

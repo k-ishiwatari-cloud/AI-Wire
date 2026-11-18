@@ -1,10 +1,11 @@
-"""記事一覧(site/index.html)・記事ページ(site/posts/<id>/)・まとめ記事(site/roundups/<id>/)・sitemap.xml を
-静的 HTML として書き出す。
+"""トップ(site/index.html)・速報の一覧(site/news.html)・記事ページ(site/posts/<id>/)・
+まとめ記事(site/roundups/<id>/)・sitemap.xml を静的 HTML として書き出す。
 
 JavaScript を実行しないクローラー(AdSense の審査など)にも記事が見えるよう、ビルド時に描画する。
 build_manifest.py から呼び出される。依存は標準ライブラリのみ。
 
-site/index.html はテンプレートを兼ねる。<!-- build:NAME --> と <!-- /build:NAME --> の間を
+トップは人が確認した週次まとめを中心にし、自動で掲載する速報は /news に分ける。
+site/index.html と site/news.html はテンプレートを兼ねる。<!-- build:NAME --> と <!-- /build:NAME --> の間を
 ビルドのたびに置き換えるので、何度実行しても結果は同じになる。
 """
 from __future__ import annotations
@@ -17,7 +18,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
 
-from roundup_markdown import render_markdown
+from roundup_markdown import linked_ids, render_first_block, render_inline, render_markdown, sections
 
 BASE_URL = "https://ai-wire.site"
 TAG_ORDER = ["Release", "Agent", "Benchmark", "Framework", "OSS", "Policy", "Research", "Safety", "Japan", "Other"]
@@ -169,7 +170,7 @@ def _fill(html: str, name: str, content: str) -> str:
 
 
 def render_latest_roundup(roundups: list[dict]) -> str:
-    """トップに出す最新のまとめ。roundups は新しい順に並んでいる前提。"""
+    """速報の一覧の上に出す最新のまとめへの案内。roundups は新しい順に並んでいる前提。"""
     if not roundups:
         return ""
     latest = roundups[0]
@@ -186,7 +187,8 @@ def render_latest_roundup(roundups: list[dict]) -> str:
     ])
 
 
-def render_index(template: str, posts: list[dict], generated_at: str, roundups: list[dict] = ()) -> str:
+def render_news(template: str, posts: list[dict], generated_at: str, roundups: list[dict] = ()) -> str:
+    """速報の一覧(site/news.html)。"""
     last_updated = (f'<time id="last-updated" datetime="{escape(generated_at)}">'
                     f"{format_last_updated(generated_at)}</time>")
     html = _fill(template, "last-updated", last_updated)
@@ -195,9 +197,58 @@ def render_index(template: str, posts: list[dict], generated_at: str, roundups: 
     return _fill(html, "feed", "\n" + render_feed(posts) + "\n")
 
 
+def _home_latest(roundup: dict) -> list[str]:
+    """最新のまとめ。タイトル・要約・「今週の要点」の全文に加え、各テーマの見出しと冒頭の段落をトップに載せる。
+    個々のニュースの並べ直しではなく、編集した分析があることがトップで伝わるようにする。"""
+    lines = [
+        '<article class="roundup-banner home-latest">',
+        '  <p class="home-label">最新の週次まとめ</p>',
+        f'  <h2 class="roundup-banner-title"><a href="{roundup_path(roundup)}">{escape(roundup["title"])}</a></h2>',
+        f'  <p class="doc-meta">対象期間: {escape(_period(roundup))}</p>',
+        f'  <p class="roundup-banner-summary">{escape(roundup["summary"])}</p>',
+    ]
+    found = sections(roundup["body"])
+    if found:
+        (heading, body), rest = found[0], found[1:]
+        lines += ['  <div class="roundup-body home-points">', f"<h3>{render_inline(heading)}</h3>", render_markdown(body)]
+        for heading, body in rest:
+            lines += [f"<h3>{render_inline(heading)}</h3>", render_first_block(body)]
+        lines.append("  </div>")
+    lines += [f'  <a class="roundup-banner-all" href="{roundup_path(roundup)}">まとめの続きを読む →</a>', "</article>"]
+    return lines
+
+
+def _home_past(roundups: list[dict]) -> list[str]:
+    items = [
+        f'    <li><a href="{roundup_path(r)}">{escape(r["title"])}</a>'
+        f'<p class="roundup-list-summary">{escape(r["summary"])}</p></li>'
+        for r in roundups
+    ]
+    return [
+        '<section class="home-past">',
+        "  <h2>過去のまとめ</h2>",
+        '  <ul class="roundup-list">', *items, "  </ul>",
+        '  <a class="roundup-banner-all" href="/roundups/">まとめ一覧 →</a>',
+        "</section>",
+    ]
+
+
+def render_home(template: str, roundups: list[dict]) -> str:
+    """トップ(site/index.html)。roundups は新しい順に並んでいる前提。速報への案内はテンプレートに書いてある。"""
+    roundups = list(roundups)
+    lines = [""]
+    if roundups:
+        lines += _home_latest(roundups[0])
+    if len(roundups) > 1:
+        lines += _home_past(roundups[1:])
+    # まとめがなければ、トップは説明文と速報への案内だけになるので広告を出さない
+    html = _fill(template, "ads", f"\n{ADSENSE_TAG}\n" if roundups else "")
+    return _fill(html, "home", "\n".join([*lines, ""]))
+
+
 def render_post_page(post: dict) -> str:
     main = f"""<main class="post-page">
-  <p class="doc-back"><a href="/">← AI WIRE トップへ戻る</a></p>
+  <p class="doc-back"><a href="/news">← 日々の速報へ戻る</a></p>
 
 <div class="date-block is-last" style="--cards: 1">
 {_date_group(post["date"], [render_card(post, full=True)])}
@@ -236,7 +287,27 @@ def _period(roundup: dict) -> str:
     return f"{start.year}年{start.month}月{start.day}日〜{end_text}"
 
 
-def render_roundup_page(roundup: dict) -> str:
+def render_roundup_sources(roundup: dict, posts: list[dict]) -> str:
+    """本文がリンクしている記事と、その出典(元の発表・報道)の一覧。読者が一次情報を確かめられるようにする。
+    出典 URL は記事のデータから書くので、AI が URL を作ることはない。"""
+    by_id = {p["id"]: p for p in posts}
+    items = [
+        f'    <li><a href="{post_path(p)}">{escape(p["title"])}</a> — '
+        f'<a href="{escape(p["source_url"])}" target="_blank" rel="noopener noreferrer">{escape(p["source_name"])}</a></li>'
+        for p in (by_id[i] for i in linked_ids(roundup["body"]) if i in by_id)
+    ]
+    if not items:
+        return ""
+    return "\n".join([
+        '\n  <section class="roundup-sources">',
+        "  <h2>このまとめの出典</h2>",
+        "  <ul>", *items, "  </ul>",
+        "  </section>\n",
+    ])
+
+
+def render_roundup_page(roundup: dict, posts: list[dict] = ()) -> str:
+    """posts は本文がリンクしている記事を探すための記事一覧(出典の一覧に使う)。"""
     main = f"""<main class="doc roundup-page">
   <p class="doc-back"><a href="/">← AI WIRE トップへ戻る</a> ・ <a href="/roundups/">まとめ一覧</a></p>
 
@@ -246,7 +317,7 @@ def render_roundup_page(roundup: dict) -> str:
   <div class="roundup-body">
 {render_markdown(roundup["body"])}
   </div>
-
+{render_roundup_sources(roundup, list(posts))}
   <p class="roundup-note">このまとめは、AI WIRE に掲載した記事をもとに AI が作成し、編集者が確認して公開しています。
   個々のニュースの詳細は、リンク先の記事と出典をご覧ください。</p>
 
@@ -261,7 +332,7 @@ def render_roundups_index(roundups: list[dict]) -> str:
         f'    <li><a href="{roundup_path(r)}">{escape(r["title"])}</a>'
         f'<p class="roundup-list-summary">{escape(r["summary"])}</p></li>'
         for r in roundups
-    )
+    ) or "    <li>まだまとめはありません。</li>"
     main = f"""<main class="doc roundup-page">
   <p class="doc-back"><a href="/">← AI WIRE トップへ戻る</a></p>
 
@@ -312,8 +383,10 @@ def write_site(posts: list[dict], generated_at: str, site_dir: Path, roundups: l
     if bad_urls:
         raise ValueError(f"出典 URL が http(s) ではない記事があります: {bad_urls}")
 
-    index = site_dir / "index.html"
-    index.write_text(render_index(index.read_text(encoding="utf-8"), posts, generated_at, roundups), encoding="utf-8")
+    home = site_dir / "index.html"
+    home.write_text(render_home(home.read_text(encoding="utf-8"), roundups), encoding="utf-8")
+    news = site_dir / "news.html"
+    news.write_text(render_news(news.read_text(encoding="utf-8"), posts, generated_at, roundups), encoding="utf-8")
 
     # 削除された記事のページが残らないよう、生成先を作り直す
     posts_dir = site_dir / "posts"
@@ -328,8 +401,9 @@ def write_site(posts: list[dict], generated_at: str, site_dir: Path, roundups: l
     for roundup in roundups:
         page = roundups_dir / roundup["id"] / "index.html"
         page.parent.mkdir(parents=True)
-        page.write_text(render_roundup_page(roundup), encoding="utf-8")
-    if roundups:
-        (roundups_dir / "index.html").write_text(render_roundups_index(roundups), encoding="utf-8")
+        page.write_text(render_roundup_page(roundup, posts), encoding="utf-8")
+    # トップの左列から常にリンクしているので、まとめが 0 本でも一覧ページを作る
+    roundups_dir.mkdir(parents=True, exist_ok=True)
+    (roundups_dir / "index.html").write_text(render_roundups_index(roundups), encoding="utf-8")
 
     (site_dir / "sitemap.xml").write_text(render_sitemap(roundups), encoding="utf-8")

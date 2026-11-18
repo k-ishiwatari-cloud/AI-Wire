@@ -4,7 +4,7 @@ import struct
 from pathlib import Path
 
 SITE = Path(__file__).resolve().parents[2] / "site"
-PAGES = ("index.html", "privacy.html", "about.html", "404.html")
+PAGES = ("index.html", "news.html", "privacy.html", "about.html", "404.html")
 
 # 404.html は任意の深さのパスで表示されるため、すべて絶対パスで参照する
 HEAD_LINKS = (

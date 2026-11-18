@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI WIRE — AIニュースフィード</title>
+<title>AI WIRE — AI ニュースの週次まとめ</title>
+<meta name="description" content="AI WIRE は、生成 AI を中心とした AI 関連ニュースを 1 週間ごとにテーマで整理した週次まとめを掲載しています。">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -14,41 +15,41 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7300454039947562"
-     crossorigin="anonymous"></script>
+<link rel="stylesheet" href="/style.css">
+<!-- 広告タグは、まとめが 1 本以上あるときだけビルド時に scripts/render_site.py が書き込む -->
+<!-- build:ads --><!-- /build:ads -->
 </head>
 <body>
 
 <div class="app">
   <aside class="rail">
     <div class="rail-top">
-      <div class="wordmark"><img class="wordmark-mark" src="/favicon.svg" alt="" width="28" height="28">AI<span>WIRE</span></div>
-      <p class="tagline">AI ニュース・ダイジェスト</p>
-
-      <p class="meta">最終更新 <!-- build:last-updated --><time id="last-updated">—</time><!-- /build:last-updated --></p>
+      <a class="wordmark" href="/"><img class="wordmark-mark" src="/favicon.svg" alt="" width="28" height="28">AI<span>WIRE</span></a>
+      <p class="tagline">AI ニュースの週次まとめ</p>
     </div>
 
-    <nav class="filters" id="filters" aria-label="タグで絞り込み">
-      <button class="filter-chip is-active" data-tag="__all__" type="button">すべて</button>
-      <!-- build:filters --><!-- /build:filters -->
+    <nav class="rail-nav" aria-label="サイト内の案内">
+      <a href="/roundups/">まとめ一覧</a>
+      <a href="/news">日々の速報</a>
+      <a href="/about">AI WIRE について</a>
     </nav>
   </aside>
 
-  <main class="feed-wrap">
-    <!-- 最新のまとめと記事一覧はビルド時に scripts/render_site.py が書き出す -->
-    <!-- build:roundup --><!-- /build:roundup -->
-    <div class="feed" id="feed">
-      <!-- build:feed --><!-- /build:feed -->
-    </div>
+  <main class="feed-wrap home">
+    <h1 class="home-heading">AI ニュースの週次まとめ</h1>
+    <p class="home-lead">AI WIRE は、生成 AI を中心とした AI 関連のニュースを 1 週間ごとにテーマで整理し、何が起きたのかを読み物としてお届けします。まとめは AI が下書きし、編集者が確認してから公開しています。</p>
+
+    <!-- 最新のまとめと過去のまとめはビルド時に scripts/render_site.py が書き出す -->
+    <!-- build:home --><!-- /build:home -->
+
+    <p class="home-news"><a href="/news">日々の速報はこちら →</a></p>
 
     <footer class="site-footer">
       <a href="/about">AI WIRE について</a>
-      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="/privacy">プライバシーポリシー</a>
     </footer>
   </main>
 </div>
 
-<script src="app.js"></script>
 </body>
 </html>

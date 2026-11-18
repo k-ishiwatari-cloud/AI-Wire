@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日々の速報 — AI WIRE</title>
+<meta name="description" content="AI 関連ニュースを、出典へのリンク付きで短く要約した速報の一覧です。">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="canonical" href="https://ai-wire.site/news">
+<!-- 速報は人の確認なしに自動で掲載する短い要約の一覧なので、検索結果に出さず、広告も出さない -->
+<meta name="robots" content="noindex, follow">
+<script src="/analytics.js"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-F59NHKG7G0"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div class="app">
+  <aside class="rail">
+    <div class="rail-top">
+      <a class="wordmark" href="/"><img class="wordmark-mark" src="/favicon.svg" alt="" width="28" height="28">AI<span>WIRE</span></a>
+      <p class="tagline">日々の速報</p>
+
+      <p class="meta">最終更新 <!-- build:last-updated --><time id="last-updated">—</time><!-- /build:last-updated --></p>
+    </div>
+
+    <nav class="filters" id="filters" aria-label="タグで絞り込み">
+      <button class="filter-chip is-active" data-tag="__all__" type="button">すべて</button>
+      <!-- build:filters --><!-- /build:filters -->
+    </nav>
+  </aside>
+
+  <main class="feed-wrap">
+    <p class="doc-back news-back"><a href="/">← AI WIRE トップ(まとめ)へ戻る</a></p>
+    <h1 class="news-heading">日々の速報</h1>
+    <p class="news-lead">AI 関連のニュースを AI が集めて要約し、自動で掲載しています。詳しい内容は各記事の出典をご覧ください。</p>
+    <!-- 最新のまとめと記事一覧はビルド時に scripts/render_site.py が書き出す -->
+    <!-- build:roundup --><!-- /build:roundup -->
+    <div class="feed" id="feed">
+      <!-- build:feed --><!-- /build:feed -->
+    </div>
+
+    <footer class="site-footer">
+      <a href="/about">AI WIRE について</a>
+      <a href="/privacy">プライバシーポリシー</a>
+    </footer>
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

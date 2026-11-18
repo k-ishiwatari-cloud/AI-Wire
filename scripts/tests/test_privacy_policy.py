@@ -24,7 +24,8 @@ def test_privacy_page_is_a_standalone_html_page():
 
 
 def test_privacy_page_is_linked_from_top_page():
-    assert 'href="privacy.html"' in (SITE / "index.html").read_text(encoding="utf-8")
+    for name in ("index.html", "news.html"):
+        assert 'href="/privacy"' in (SITE / name).read_text(encoding="utf-8"), name
 
 
 def test_operator_and_effective_date():

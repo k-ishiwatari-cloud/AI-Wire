@@ -137,29 +137,29 @@ def test_filters_render_each_tag_once():
 
 
 def test_index_fills_build_markers_and_is_idempotent():
-    template = (SITE / "index.html").read_text(encoding="utf-8")
+    template = (SITE / "news.html").read_text(encoding="utf-8")
     posts = [_post()]
-    once = render_site.render_index(template, posts, "2026-10-29T11:05:00Z")
-    twice = render_site.render_index(once, posts, "2026-10-29T11:05:00Z")
+    once = render_site.render_news(template, posts, "2026-10-29T11:05:00Z")
+    twice = render_site.render_news(once, posts, "2026-10-29T11:05:00Z")
     assert once == twice
     assert once.count('<article class="card"') == 1
     assert 'data-tag="Release"' in once
     assert '<time id="last-updated" datetime="2026-10-29T11:05:00Z">2026/10/29 20:05</time>' in once
 
 
-def test_index_has_canonical_url():
-    assert '<link rel="canonical" href="https://ai-wire.site/">' in (SITE / "index.html").read_text(encoding="utf-8")
+def test_news_has_canonical_url():
+    assert '<link rel="canonical" href="https://ai-wire.site/news">' in (SITE / "news.html").read_text(encoding="utf-8")
 
 
 def test_index_template_has_build_markers():
-    template = (SITE / "index.html").read_text(encoding="utf-8")
+    template = (SITE / "news.html").read_text(encoding="utf-8")
     for name in ("last-updated", "filters", "feed"):
         assert f"<!-- build:{name} -->" in template and f"<!-- /build:{name} -->" in template
 
 
 def test_index_rejects_template_without_markers():
     with pytest.raises(ValueError):
-        render_site.render_index("<html></html>", [_post()], "2026-10-29T11:05:00Z")
+        render_site.render_news("<html></html>", [_post()], "2026-10-29T11:05:00Z")
 
 
 # ---------------- 記事ページ ----------------
@@ -173,7 +173,7 @@ def test_post_page_is_standalone_and_uses_absolute_paths():
     assert '<link rel="canonical" href="https://ai-wire.site/posts/2026-10-29-sample-news/">' in html
     hrefs = re.findall(r'(?:href|src)="([^"]+)"', html)
     assert [h for h in hrefs if not h.startswith(("/", "https://"))] == []
-    assert 'href="/"' in html and 'href="/privacy"' in html
+    assert 'href="/news"' in html and 'href="/privacy"' in html
 
 
 def test_post_page_is_noindex_but_links_are_followed():
@@ -196,7 +196,7 @@ def test_footer_links_to_about_and_privacy():
 def test_post_page_has_same_tags_as_other_pages():
     """解析・アイコンは既存ページと同じものを読み込む(広告は出さない。test_adsense を参照)。"""
     html = render_site.render_post_page(_post())
-    index = (SITE / "index.html").read_text(encoding="utf-8")
+    index = (SITE / "news.html").read_text(encoding="utf-8")
     for tag in re.findall(r"<(?:script|link)\b[^>]*>", index):
         if 'rel="canonical"' in tag or "adsbygoogle" in tag:
             continue
@@ -245,6 +245,7 @@ def _site_copy(tmp_path):
     site = tmp_path / "site"
     site.mkdir()
     shutil.copy(SITE / "index.html", site / "index.html")
+    shutil.copy(SITE / "news.html", site / "news.html")
     return site
 
 
@@ -260,7 +261,7 @@ def test_write_site_outputs_pages_and_removes_stale_ones(tmp_path):
     assert (site / "posts" / "b" / "index.html").is_file()
     assert not stale.exists()
     assert (site / "sitemap.xml").is_file()
-    assert (site / "index.html").read_text(encoding="utf-8").count('<article class="card"') == 2
+    assert (site / "news.html").read_text(encoding="utf-8").count('<article class="card"') == 2
 
 
 @pytest.mark.parametrize("post_id", ["../escape", "a/b", "ok\n", "-starts-with-hyphen"])
@@ -301,7 +302,7 @@ def test_preview_trims_space_at_cut_point():
 
 def test_index_hides_body_and_source_which_stay_on_post_page():
     post = _post(summary=LONG_SUMMARY)
-    index = render_site.render_index((SITE / "index.html").read_text(encoding="utf-8"), [post], "2026-10-29T11:05:00Z")
+    index = render_site.render_news((SITE / "news.html").read_text(encoding="utf-8"), [post], "2026-10-29T11:05:00Z")
     page = render_site.render_post_page(post)
     for text in ("本文1行目", "Example News で読む →", LONG_SUMMARY):
         assert text not in index, text
@@ -349,23 +350,23 @@ def test_roundups_index_lists_every_roundup_newest_first():
 
 
 def test_index_shows_latest_roundup_banner():
-    template = (SITE / "index.html").read_text(encoding="utf-8")
-    once = render_site.render_index(template, [_post()], "2026-10-29T11:05:00Z",
+    template = (SITE / "news.html").read_text(encoding="utf-8")
+    once = render_site.render_news(template, [_post()], "2026-10-29T11:05:00Z",
                                     [_roundup(id="2026-w45", title="新しい週"), _roundup(id="2026-w44", title="古い週")])
     assert 'href="/roundups/2026-w45/"' in once and "新しい週" in once
     assert "古い週" not in once
     assert 'href="/roundups/"' in once
-    assert render_site.render_index(once, [_post()], "2026-10-29T11:05:00Z",
+    assert render_site.render_news(once, [_post()], "2026-10-29T11:05:00Z",
                                     [_roundup(id="2026-w45", title="新しい週")]) == once
 
 
 def test_index_without_roundups_has_no_banner():
-    template = (SITE / "index.html").read_text(encoding="utf-8")
-    assert "roundup-banner" not in render_site.render_index(template, [_post()], "2026-10-29T11:05:00Z")
+    template = (SITE / "news.html").read_text(encoding="utf-8")
+    assert "roundup-banner" not in render_site.render_news(template, [_post()], "2026-10-29T11:05:00Z")
 
 
 def test_index_template_has_roundup_marker():
-    template = (SITE / "index.html").read_text(encoding="utf-8")
+    template = (SITE / "news.html").read_text(encoding="utf-8")
     assert "<!-- build:roundup -->" in template and "<!-- /build:roundup -->" in template
 
 
@@ -400,3 +401,144 @@ def test_write_site_rejects_unsafe_roundup_ids(tmp_path, rid):
 
 def test_generated_roundup_pages_are_not_committed():
     assert "site/roundups/" in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+# ---------------- トップ(週次まとめが中心。速報は /news) ----------------
+
+def _home(roundups, template=None):
+    template = template or (SITE / "index.html").read_text(encoding="utf-8")
+    return render_site.render_home(template, roundups)
+
+
+def test_home_shows_latest_roundup_with_its_key_points():
+    body = "## 今週の要点\n\n- 要点A\n- 要点B\n\n## テーマ2\n\n本文2"
+    html = _home([_roundup(id="2026-w45", title="新しい週", body=body), _roundup(id="2026-w44", title="古い週")])
+    latest = html[html.index('<article class="roundup-banner home-latest">'):html.index("</article>")]
+    assert 'href="/roundups/2026-w45/"' in latest and "新しい週" in latest
+    assert "対象期間: 2026年10月26日〜11月1日" in latest
+    assert "今週の &lt;要約&gt; &amp; ポイント。" in latest
+    assert "<h3>今週の要点</h3>" in latest and "<li>要点A</li>" in latest
+    assert "<h3>テーマ2</h3>" in latest and "本文2" in latest
+
+
+def test_home_lists_past_roundups_and_links_to_news():
+    html = _home([_roundup(id="2026-w45", title="新しい週"), _roundup(id="2026-w44", title="古い週")])
+    past = html[html.index('<section class="home-past">'):]
+    assert 'href="/roundups/2026-w44/"' in past and "古い週" in past
+    assert 'href="/roundups/2026-w45/"' not in past
+    assert 'href="/roundups/"' in past
+    assert '<a href="/news">日々の速報はこちら →</a>' in html
+
+
+def test_home_is_idempotent_and_has_no_feed():
+    roundups = [_roundup(id="2026-w45"), _roundup(id="2026-w44")]
+    once = _home(roundups)
+    assert _home(roundups, once) == once
+    assert '<article class="card"' not in once and "filter-chip" not in once
+
+
+def test_home_with_one_roundup_has_no_past_section():
+    assert "home-past" not in _home([_roundup()])
+
+
+def test_home_without_roundups_still_links_to_news():
+    html = _home([])
+    assert "home-latest" not in html and 'href="/news"' in html
+
+
+def test_home_template_is_indexable_and_has_markers():
+    home = (SITE / "index.html").read_text(encoding="utf-8")
+    assert "noindex" not in home
+    assert '<link rel="canonical" href="https://ai-wire.site/">' in home
+    for name in ("ads", "home"):
+        assert f"<!-- build:{name} -->" in home and f"<!-- /build:{name} -->" in home
+
+
+def test_home_has_ads_only_when_there_is_a_roundup():
+    """まとめが 1 本もないトップは説明文と案内だけになるので、広告を出さない。"""
+    with_roundup = _home([_roundup()])
+    assert with_roundup.count("adsbygoogle.js") == 1
+    assert with_roundup.index("adsbygoogle.js") < with_roundup.index("</head>")
+    assert "adsbygoogle" not in _home([])
+    assert _home([], with_roundup) == _home([])  # 何度書き直しても前の結果が残らない
+
+
+def test_news_template_is_noindex_without_ads():
+    """速報の一覧は、人の確認なしに自動で掲載する短い要約の一覧なので、検索にも広告にも出さない。"""
+    news = (SITE / "news.html").read_text(encoding="utf-8")
+    head = news[news.index("<head>"):news.index("</head>")]
+    assert '<meta name="robots" content="noindex, follow">' in head
+    assert "adsbygoogle" not in news
+    assert 'href="/"' in news
+
+
+def test_post_page_back_link_goes_to_news():
+    assert '<a href="/news">' in render_site.render_post_page(_post())
+
+
+def test_write_site_outputs_home_and_news(tmp_path):
+    site = _site_copy(tmp_path)
+    render_site.write_site([_post(id="a")], "2026-10-29T11:05:00Z", site, [_roundup(id="2026-w44")])
+    home = (site / "index.html").read_text(encoding="utf-8")
+    news = (site / "news.html").read_text(encoding="utf-8")
+    assert '<article class="card"' not in home and 'href="/roundups/2026-w44/"' in home
+    assert news.count('<article class="card"') == 1
+    assert "ai-wire.site/news" not in (site / "sitemap.xml").read_text(encoding="utf-8")
+
+
+# ---------------- まとめの出典一覧 ----------------
+
+def test_roundup_page_lists_primary_sources_of_linked_posts_in_order():
+    posts = [
+        _post(id="2026-10-27-later", title="後の記事", source_name="後", source_url="https://example.com/later"),
+        _post(id="2026-10-26-gennai", title="源内 <A>", source_name="デジタル庁 & X", source_url="https://example.com/a?b=1&c=2"),
+        _post(id="2026-10-28-unlinked", title="使っていない記事"),
+    ]
+    body = "## テーマ\n\n[源内](/posts/2026-10-26-gennai/)と[後](/posts/2026-10-27-later/)。"
+    html = render_site.render_roundup_page(_roundup(body=body), posts)
+    sources = html[html.index('<section class="roundup-sources">'):html.index("</section>")]
+    assert "<h2>このまとめの出典</h2>" in sources
+    assert ('<li><a href="/posts/2026-10-26-gennai/">源内 &lt;A&gt;</a> — '
+            '<a href="https://example.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">デジタル庁 &amp; X</a></li>') in sources
+    assert sources.index("2026-10-26-gennai") < sources.index("2026-10-27-later")
+    assert "使っていない記事" not in sources
+
+
+def test_roundup_page_without_known_posts_has_no_sources_section():
+    assert "roundup-sources" not in render_site.render_roundup_page(_roundup())
+
+
+def test_write_site_roundup_page_lists_sources(tmp_path):
+    site = _site_copy(tmp_path)
+    post = _post(id="2026-10-26-gennai", source_url="https://example.com/gennai")
+    render_site.write_site([post], "2026-10-29T11:05:00Z", site, [_roundup()])
+    page = (site / "roundups" / "2026-w44" / "index.html").read_text(encoding="utf-8")
+    assert 'href="https://example.com/gennai"' in page
+
+
+def test_home_shows_lead_paragraph_of_each_theme_only():
+    body = "## 今週の要点\n\n- 要点\n\n## **注目**のテーマ\n\n冒頭の段落。\n\n二つ目の段落。\n\n## 注目点\n\n- 確かめる点"
+    latest = _home([_roundup(body=body)])
+    assert "<h3><strong>注目</strong>のテーマ</h3>" in latest
+    assert "<p>冒頭の段落。</p>" in latest and "二つ目の段落" not in latest
+    assert "<h3>注目点</h3>" in latest and "<li>確かめる点</li>" in latest
+
+
+def test_home_heading_of_key_points_is_rendered_like_the_body():
+    latest = _home([_roundup(body="## **今週**の要点\n\n- A")])
+    assert "<h3><strong>今週</strong>の要点</h3>" in latest
+
+
+def test_write_site_always_writes_roundups_index(tmp_path):
+    """トップの左列から常にリンクしているので、まとめが 0 本でも一覧ページを作る。"""
+    site = _site_copy(tmp_path)
+    render_site.write_site([_post(id="a")], "2026-10-29T11:05:00Z", site, [])
+    assert (site / "roundups" / "index.html").is_file()
+
+
+def test_home_lead_uses_the_same_blocks_as_the_body():
+    body = ("## 今週の要点\n\n- 要点\n\n## テーマA\n\n### 小見出し\n小見出し直後の段落。\n\n二つ目。"
+            "\n\n## テーマB\n\n冒頭の段落。\n- 続く箇条書き")
+    latest = _home([_roundup(body=body)])
+    assert "<p>小見出し直後の段落。</p>" in latest and "二つ目" not in latest
+    assert "<p>冒頭の段落。</p>" in latest and "続く箇条書き" not in latest

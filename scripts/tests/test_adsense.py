@@ -15,7 +15,7 @@ def _head(name: str) -> str:
 
 
 def test_adsense_tag_is_in_head_of_content_pages():
-    for name in ("index.html", "privacy.html", "about.html"):
+    for name in ("privacy.html", "about.html"):  # トップ(index.html)はまとめがあるときだけ。test_render_site を参照
         head = _head(name)
         assert ADSENSE_SRC in head, name
         assert 'crossorigin="anonymous"' in head, name
@@ -57,3 +57,7 @@ def test_ads_only_on_reviewed_roundup_body_pages():
     head = roundup_page[roundup_page.index("<head>"):roundup_page.index("</head>")]
     assert head.count(ADSENSE_SRC) == 1
     assert "adsbygoogle" not in roundups_index
+
+
+def test_ads_are_not_on_news_list():
+    assert "adsbygoogle" not in (SITE / "news.html").read_text(encoding="utf-8")

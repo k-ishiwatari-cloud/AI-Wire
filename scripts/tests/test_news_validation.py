@@ -301,6 +301,9 @@ def test_blocked_redirect_closes_response():
     ("通常の見出し", "https://aidr.today/date/2026-10-17?lang=en"),
     ("通常の見出し", "https://explainx.ai/catch-up-on-ai/2026-10-18"),
     ("通常の見出し", "https://example.com/news/week-oct-19-2026.html"),
+    # 「今日の AI ニュース」のまとめページ
+    ("GitHubのモデル・機能廃止（開発者影響）", "https://www.saazora.com/blog/ai-saas-news-today-november-15-2026.html"),
+    ("通常の見出し", "https://aiweekly.co/ai-news-today/openai-news"),
     ("【週刊まとめ】新モデル発表と規制動向", "https://example.com/news/1"),
     ("「今週のAIニュース」：新モデル発表と規制動向", "https://example.com/news/1"),
     ("0123456789業界要約：見出しの頭から10字まではラベル", "https://example.com/news/1"),
@@ -309,6 +312,9 @@ def test_blocked_redirect_closes_response():
     # 言語だけのパスはトップページ
     ("AI動画・生成メディア分野での商用採用とコスト低下の潮流", "https://ai.zhudong.net/en/"),
     ("通常の見出し", "https://example.com/ja-jp/"),
+    # 年/月/日で終わるパスは、その日の記事一覧
+    ("通常の見出し", "https://www.techno-edge.net/article/2026/11/13/"),
+    ("通常の見出し", "https://example.com/2026/11/13"),
 ])
 def test_digests_of_other_curation_sites_are_detected(title, url):
     assert is_digest(title, url)
@@ -320,6 +326,9 @@ def test_digests_of_other_curation_sites_are_detected(title, url):
     ("OpenAIがGPT-6.1を公開", "https://openai.com/news/", False),                  # 一覧ページでも中身は個別のニュース
     ("通常の見出し", "https://getyourbrief.com/ai/2026-10-30", False),             # 日付のページでも中身は個別のニュース
     ("通常の見出し", "https://example.com/news/1", False),
+    ("日本の自治体・政府AI導入動向（国内報道まとめ）", "https://example.com/news/1", True),  # 括弧の中でまとめと名乗る
+    ("Slackに「週刊まとめ」機能を追加", "https://example.com/news/1", False),            # 「」の機能名は個別のニュース
+    ("Slackが新機能を追加（会議まとめ）", "https://example.com/news/1", False),           # 報道・ニュースのまとめではない
 ])
 def test_content_digest_reason_only_flags_articles_that_are_roundups_themselves(title, url, expected):
     """まとめ記事の材料から外すのは、記事そのものがまとめ(か、トップページで中身を確かめられない)ものだけ。"""
@@ -354,6 +363,15 @@ def test_content_digest_reason_only_flags_articles_that_are_roundups_themselves(
     # 日付を slug にする個別記事のサイトもあるので、日付だけのページはまとめと分かっているサイトに限る
     ("通常の見出し", "https://blog.example.com/posts/2026-10-29"),
     ("01234567890業界要約：11字目からは本文中の語", "https://example.com/news/1"),
+    # 「news」と「today」を別々に含むだけの個別記事
+    ("通常の見出し", "https://example.com/news/today-openai-launches-x"),
+    ("通常の見出し", "https://example.com/2026/11/15/good-news-today-for-developers-x"),
+    ("通常の見出し", "https://example.com/blog/good-news-today-for-15-developers"),
+    ("通常の見出し", "https://example.com/blog/good-news-today-update-15-2026"),
+    # 年/月/日 に見えても実在しない日付・数字でない文字・クエリで個別記事を指すもの
+    ("通常の見出し", "https://example.com/2026/02/31/"),
+    ("通常の見出し", "https://example.com/2026/%C2%B2/13/"),
+    ("通常の見出し", "https://example.com/2026/11/13/?p=123"),
 ])
 def test_ordinary_news_is_not_a_digest(title, url):
     assert not is_digest(title, url)
@@ -368,3 +386,19 @@ def test_digest_reason_names_the_matched_rule():
     assert "トップページ" in digest_reason("通常の見出し", "https://www.reuters.com/")
     assert "概況" in digest_reason("10月12日の業界概況", "https://example.com/news/1")
     assert "archive" in digest_reason("通常の見出し", "https://metamesh.biz/archive/2026/10/23")
+
+
+
+@pytest.mark.parametrize("title, url, expected", [
+    ("GitHubのモデル・機能廃止", "https://www.saazora.com/blog/ai-saas-news-today-november-15-2026.html", True),
+    ("通常の見出し", "https://getyourbrief.com/ai/2026-10-30", True),       # その日の発表をまとめたページ
+    ("通常の見出し", "https://www.techno-edge.net/article/2026/11/13/", True),
+    ("通常の見出し", "https://aibriefs.news/briefing/2026-09-12", True),
+    ("通常の見出し", "https://ai.zhudong.net/en/", True),                  # トップページ
+    ("OpenAIがGPT-6.1を公開", "https://openai.com/news/", False),         # 公式の発表一覧は一次情報として使う
+    ("通常の見出し", "https://example.com/news/1", False),
+])
+def test_roundup_source_reason_rejects_other_sites_digests_as_evidence(title, url, expected):
+    """週次まとめの根拠には、他サイトのまとめページを出典にした記事を使わない(元の発表・報道を確かめられないため)。"""
+    from news_validation import roundup_source_reason
+    assert (roundup_source_reason(title, url) is not None) is expected

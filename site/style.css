@@ -69,6 +69,7 @@ button { font-family: inherit; }
   letter-spacing: 0.02em;
 }
 .wordmark span { color: var(--accent); }
+a.wordmark { color: var(--text); text-decoration: none; }
 .wordmark-mark {
   width: 28px;
   height: 28px;
@@ -117,6 +118,18 @@ button { font-family: inherit; }
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* サイト内の案内(トップの左列) */
+.rail-nav {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  font-size: 13.5px;
+}
+.rail-nav a { color: var(--text-muted); text-decoration: none; }
+.rail-nav a:hover { color: var(--accent); }
 
 /* ---------------- Site footer ---------------- */
 
@@ -398,15 +411,69 @@ button { font-family: inherit; }
   margin-top: 48px;
   padding-top: 16px;
 }
+.roundup-sources {
+  margin-top: 40px;
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+.roundup-sources h2 { font-size: 17px; }
+.roundup-sources li { margin-bottom: 8px; }
 .roundup-list { list-style: none; padding-left: 0; }
 .roundup-list li { margin-bottom: 20px; }
 .roundup-list a { font-weight: 600; }
 .roundup-list-summary { margin: 4px 0 0; font-size: 14px; }
 
+/* ---------------- Home (トップ: 週次まとめが中心) ---------------- */
+
+.home-heading, .news-heading {
+  font-family: var(--font-display);
+  font-size: 24px;
+  margin: 0 0 12px;
+}
+.home-lead, .news-lead {
+  font-size: 14.5px;
+  line-height: 1.85;
+  color: var(--text-muted);
+  margin: 0 0 32px;
+}
+.news-back { margin-bottom: 20px; }
+.home-label {
+  margin: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+.home-latest h2.roundup-banner-title { font-size: 19px; margin: 0 0 4px; }
+.home-latest h2.roundup-banner-title a { color: inherit; text-decoration: none; }
+.home-latest h2.roundup-banner-title a:hover { color: var(--accent); }
+.home-latest .doc-meta { margin: 0 0 10px; }
+.home-points {
+  font-size: 14.5px;
+  line-height: 1.85;
+  color: var(--text-muted);
+}
+.home-points h3 { margin-top: 20px; }
+.home-points a { color: var(--accent); }
+.home-past h2 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  margin: 8px 0 16px;
+}
+.home-past .roundup-list a { color: var(--text); text-decoration: none; }
+.home-past .roundup-list a:hover { color: var(--accent); }
+.home-past .roundup-list-summary { color: var(--text-muted); line-height: 1.75; }
+.home-news {
+  margin: 36px 0 0;
+  font-size: 15px;
+}
+.home-news a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.home-news a:hover { text-decoration: underline; }
+
 /* ---------------- Responsive ---------------- */
 
 @media (max-width: 860px) {
-  .app { grid-template-columns: minmax(0, 1fr); }
+  /* 本文の短いページで、上の帯(.rail)が画面の高さに引き伸ばされないようにする */
+  .app { grid-template-columns: minmax(0, 1fr); align-content: start; }
   .rail {
     position: relative;
     height: auto;
@@ -421,6 +488,7 @@ button { font-family: inherit; }
   .rail-top { display: flex; align-items: baseline; gap: 12px; }
   .tagline { display: none; }
   .filters { margin-top: 0; flex: none; width: 100%; }
+  .rail-nav { margin-top: 0; flex: none; width: 100%; flex-direction: row; flex-wrap: wrap; gap: 8px 16px; }
   .feed-wrap { padding: 28px 20px 60px; }
   .post-page { padding: 28px 20px 60px; }
 }

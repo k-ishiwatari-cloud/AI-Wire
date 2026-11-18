@@ -15,8 +15,14 @@ def test_titles_do_not_say_internal():
         assert "社内" not in title, page.name
 
 
+# 速報の一覧は、人の確認なしに自動で掲載する短い要約の一覧なので、意図して検索の対象から外す
+NOINDEX_PAGES = {"news.html"}
+
+
 def test_pages_are_indexable():
     for page in _pages():
+        if page.name in NOINDEX_PAGES:
+            continue
         assert "noindex" not in page.read_text(encoding="utf-8").lower(), page.name
 
 

@@ -4,7 +4,7 @@
 """
 import pytest
 
-from roundup_markdown import linked_ids, render_markdown, visible_length
+from roundup_markdown import first_section, linked_ids, render_inline, render_markdown, sections, visible_length
 
 
 def test_headings_paragraphs_and_lists():
@@ -75,3 +75,47 @@ def test_internal_links_include_roundups():
     from roundup_markdown import internal_links
     text = "[記事](/posts/a/) [まとめ](/roundups/2026-w43/) [外部](https://example.com/)"
     assert internal_links(text) == [("posts", "a"), ("roundups", "2026-w43")]
+
+
+def test_first_section_returns_heading_and_its_body_only():
+    text = "## 今週の要点\n\n- A\n- B\n\n### 小見出し\n\n続き\n\n## 次のテーマ\n\n本文"
+    assert first_section(text) == ("今週の要点", "- A\n- B\n\n### 小見出し\n\n続き")
+
+
+def test_first_section_skips_text_before_first_heading():
+    assert first_section("前置き\n\n## 要点\n\n本文") == ("要点", "本文")
+
+
+def test_first_section_without_heading_is_none():
+    assert first_section("見出しのない本文") is None
+
+
+def test_first_section_ignores_top_level_title_before_it():
+    """先頭に「# タイトル」があっても、最初の ## 節(今週の要点)を取る。"""
+    assert first_section("# タイトル\n\n## 今週の要点\n\n- A\n\n## 次\n\nB") == ("今週の要点", "- A")
+
+
+def test_sections_split_on_level_two_headings_only():
+    text = "前置き\n\n## 要点\n\n- A\n\n## テーマ1\n\n段落1\n\n### 小見出し\n\n段落2\n\n# 迷い込んだ見出し\n\n捨てる\n\n## 注目点\n\n- C"
+    assert sections(text) == [
+        ("要点", "- A"),
+        ("テーマ1", "段落1\n\n### 小見出し\n\n段落2"),
+        ("注目点", "- C"),
+    ]
+
+
+def test_render_inline_uses_the_same_inline_rules_as_the_body():
+    assert render_inline("**重要** & [記事](/posts/abc/)") == '<strong>重要</strong> &amp; <a href="/posts/abc/">記事</a>'
+
+
+def test_content_texts_exclude_headings():
+    from roundup_markdown import content_texts
+    assert content_texts("## 見出し\n\n段落\n\n- 項目A\n- 項目B\n\n### 小見出し") == ["段落", "項目A", "項目B"]
+
+
+def test_render_first_block_skips_headings_and_renders_only_one_block():
+    from roundup_markdown import render_first_block
+    assert render_first_block("### 小見出し\n段落。\n\n二つ目") == "<p>段落。</p>"
+    assert render_first_block("段落。\n- 箇条") == "<p>段落。</p>"
+    assert render_first_block("- A\n- B\n\n段落") == "<ul>\n<li>A</li>\n<li>B</li>\n</ul>"
+    assert render_first_block("### 見出しだけ") == ""

@@ -313,3 +313,91 @@ def test_prompt_examples_do_not_use_real_article_ids():
     prompt = gr.build_prompt(WEEK, "2026-w44").split("## 記事一覧")[0]
     assert "/posts/記事ID/" in prompt
     assert not re.search(r"/posts/\d{4}-\d{2}-\d{2}-", prompt)
+
+
+# ---------------- 出典での確認(人が元の発表・報道で確かめる箇所) ----------------
+
+def _sourced(id_, url):
+    return {**_post(id_, "2026-10-26"), "source_name": f"出典{id_}", "source_url": url}
+
+
+def test_fact_check_items_pair_numbers_with_sources_linked_in_the_same_sentence():
+    posts = [_sourced("a", "https://e.com/a"), _sourced("b", "https://e.com/b")]
+    body = "## 要点\n\n- [A社](/posts/a/)は約18万人に提供した。[B社](/posts/b/)は新モデルを出した。"
+    assert gr.fact_check_items(body, posts) == [
+        ("A社は約18万人に提供した。", ["18"], [("出典a", "https://e.com/a")], True),
+    ]
+
+
+def test_fact_check_items_fall_back_to_links_in_the_same_block():
+    """文の中にリンクがなければ同じ段落のリンクを参考として出し、そうと分かるようにする(最後の要素が False)。"""
+    posts = [_sourced("a", "https://e.com/a")]
+    body = "[A社](/posts/a/)が発表した。利用者は3,500社に達した。"
+    assert gr.fact_check_items(body, posts) == [
+        ("利用者は3,500社に達した。", ["3,500"], [("出典a", "https://e.com/a")], False),
+    ]
+
+
+def test_fact_check_items_keep_sentences_without_any_source():
+    assert gr.fact_check_items("リンクのない段落で、売上は25%増えた。", []) == [
+        ("リンクのない段落で、売上は25%増えた。", ["25"], [], False),
+    ]
+
+
+def test_fact_check_items_keep_links_whole_and_split_on_exclamation_and_question():
+    """リンクの文字列の中の「。」で文を分けない。リンク先の URL の数字(記事 ID の日付)は拾わない。"""
+    posts = [_sourced("2026-11-18-a", "https://e.com/a"), _sourced("2026-11-18-b", "https://e.com/b")]
+    body = "[A社。発表](/posts/2026-11-18-a/)は12社と提携！[B社](/posts/2026-11-18-b/)は34件を公開？"
+    assert gr.fact_check_items(body, posts) == [
+        ("A社。発表は12社と提携！", ["12"], [("出典2026-11-18-a", "https://e.com/a")], True),
+        ("B社は34件を公開？", ["34"], [("出典2026-11-18-b", "https://e.com/b")], True),
+    ]
+
+
+def test_fact_check_items_ignore_single_digits_and_link_urls():
+    posts = [_sourced("2026-10-26-a", "https://e.com/a")]
+    assert gr.fact_check_items("[A社](/posts/2026-10-26-a/)は3つの機能を出した。", posts) == []
+
+
+def test_report_lists_sentences_to_check_against_sources():
+    body = _body() + "\n\n[源内](/posts/2026-10-26-gennai/)は約18万人に提供される。人数は18万人とされる。"
+    r = gr.build_roundup("2026-w44", "要約", body, "2026-11-01T22:05:00Z")
+    report = gr.render_report(r, WEEK, [], attempts=1)
+    section = report[report.index("### 出典で確かめてほしい箇所"):report.index("### 公開の手順")]
+    assert "- [ ] 源内は約18万人に提供される。(18)— [Example](https://e.com/1)" in section
+    assert "- [ ] 人数は18万人とされる。(18)— 同じ段落の記事の出典: [Example](https://e.com/1)" in section
+    steps = report[report.index("### 公開の手順"):]
+    assert "出典で確かめ" in steps and "最新" in steps  # 直したあとはプレビューの最新版で確かめる
+
+
+def test_report_checks_numbers_in_the_summary_too():
+    r = gr.build_roundup("2026-w44", "今週は12社が発表した。", _body(), "2026-11-01T22:05:00Z")
+    assert "- [ ] (要約)今週は12社が発表した。(12)— 本文の該当箇所の出典で確かめる" in gr.render_report(r, WEEK, [], attempts=1)
+
+
+def test_report_flags_numbers_without_any_source_link():
+    r = gr.build_roundup("2026-w44", "要約", _body() + "\n\n売上は25%増えた。", "2026-11-01T22:05:00Z")
+    assert "- [ ] 売上は25%増えた。(25)— 出典のリンクなし" in gr.render_report(r, WEEK, [], attempts=1)
+
+
+def test_report_without_numbers_says_so():
+    r = gr.build_roundup("2026-w44", "要約", _body(), "2026-11-01T22:05:00Z")
+    assert "数字を含む文はありませんでした" in gr.render_report(r, WEEK, [], attempts=1)
+
+
+def test_fact_check_items_skip_headings():
+    assert gr.fact_check_items("## 2026-11-16 以降の注目点\n\n- 確かめる点", []) == []
+
+
+
+def test_week_posts_exclude_articles_sourced_from_other_sites_digests():
+    digest_sourced = {**_post("2026-10-27-dg", "2026-10-27"),
+                      "source_url": "https://www.saazora.com/blog/ai-saas-news-today-october-27-2026.html"}
+    assert "2026-10-27-dg" not in [p["id"] for p in gr.select_week_posts([*WEEK, digest_sourced], "2026-w44")]
+
+
+def test_links_to_articles_sourced_from_digests_are_errors():
+    digest_sourced = {**_post("2026-10-27-dg", "2026-10-27"), "source_url": "https://getyourbrief.com/ai/2026-10-27"}
+    body = _body() + "\n\n[まとめ由来](/posts/2026-10-27-dg/)。"
+    errors, _ = gr.check_roundup("要約", body, WEEK, [*ALL, digest_sourced], "2026-w44")
+    assert any("2026-10-27-dg" in e for e in errors)

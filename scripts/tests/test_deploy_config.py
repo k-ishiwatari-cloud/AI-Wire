@@ -27,7 +27,7 @@ def _header_rules() -> dict[str, list[str]]:
 
 
 def test_site_dir_contains_entrypoints():
-    for name in ("index.html", "app.js", "style.css"):
+    for name in ("index.html", "news.html", "app.js", "style.css"):
         assert (SITE / name).is_file(), name
 
 
@@ -41,6 +41,7 @@ def test_build_generates_manifest_from_posts(tmp_path, monkeypatch):
     site = tmp_path / "site"
     site.mkdir()
     shutil.copy(SITE / "index.html", site / "index.html")
+    shutil.copy(SITE / "news.html", site / "news.html")
     output = site / "data" / "manifest.json"
     monkeypatch.setattr(build_manifest, "SITE_DIR", site)
     monkeypatch.setattr(build_manifest, "OUTPUT_PATH", output)
@@ -51,7 +52,7 @@ def test_build_generates_manifest_from_posts(tmp_path, monkeypatch):
     assert len(payload["posts"]) == post_count
     assert all(p["title"] and p["source_url"] for p in payload["posts"])
     assert len(list((site / "posts").glob("*/index.html"))) == post_count
-    assert (site / "index.html").read_text(encoding="utf-8").count('<article class="card"') == post_count
+    assert (site / "news.html").read_text(encoding="utf-8").count('<article class="card"') == post_count
 
     # 個別記事はすべて noindex、まとめは検索の対象のまま。sitemap には記事を載せない
     noindex = '<meta name="robots" content="noindex, follow">'
@@ -91,6 +92,7 @@ def test_build_renders_roundups(tmp_path, monkeypatch):
     site = tmp_path / "site"
     site.mkdir()
     shutil.copy(SITE / "index.html", site / "index.html")
+    shutil.copy(SITE / "news.html", site / "news.html")
     drafts = tmp_path / "roundups"
     drafts.mkdir()
     (drafts / "2026-w44.md").write_text(roundups.to_markdown({
