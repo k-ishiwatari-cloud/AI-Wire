@@ -402,3 +402,81 @@ def test_roundup_source_reason_rejects_other_sites_digests_as_evidence(title, ur
     """週次まとめの根拠には、他サイトのまとめページを出典にした記事を使わない(元の発表・報道を確かめられないため)。"""
     from news_validation import roundup_source_reason
     assert (roundup_source_reason(title, url) is not None) is expected
+
+
+# ---- AI が自動生成し人が確認していないサイト・ページ ----
+
+@pytest.mark.parametrize("url", [
+    "https://ctipilot.ch/entities/CVE-2026-133968/",
+    "https://www.ctipilot.ch/reports/2026-11-22",
+    "https://news.ctipilot.ch/x",
+    "https://ctipilot.ch./entities/x/",  # 末尾にドットの付いた同じホスト
+])
+def test_unreviewed_ai_generated_sites_are_rejected_for_news_and_roundups(url):
+    """AI が自動生成し人が確認していないと分かっているサイトは、速報の出典にも週次まとめの根拠にも使わない。"""
+    from news_validation import roundup_source_reason
+    assert "人の確認" in digest_reason("MONAI Label脆弱性に関する追加技術報告", url)
+    assert "人の確認" in roundup_source_reason("MONAI Label脆弱性に関する追加技術報告", url)
+
+
+def test_similar_host_names_are_not_rejected():
+    assert digest_reason("通常の見出し", "https://notctipilot.ch/a/1") is None
+    assert digest_reason("通常の見出し", "https://ctipilot.ch.example.com/a/1") is None
+
+
+class _Redirected(_Resp):
+    def __init__(self, final_url):
+        super().__init__()
+        self.final_url = final_url
+
+    def geturl(self):
+        return self.final_url
+
+    def read(self, n=-1):
+        raise AssertionError("転送先で落とせるときは本文を読まない")
+
+
+def test_check_url_rejects_redirect_to_unreviewed_ai_site():
+    result = check_url("https://short.example/a", opener=lambda req, timeout: _Redirected("https://ctipilot.ch/entities/x/"))
+    assert not result.ok
+    assert "ctipilot.ch" in result.reason
+
+
+def test_check_url_accepts_pages_that_mention_ai_generated_content():
+    """本文の表示では判定しない(AI 生成物を論じる通常の記事を落とさないため)。"""
+    class _Body(_Resp):
+        def read(self, n=-1):
+            return b"<p>Critics said the site shows 'AI-generated | no human review'.</p>"
+    assert check_url("https://x.example/a", opener=lambda req, timeout: _Body()).ok
+
+
+def test_redirect_to_unreviewed_ai_site_is_rejected_even_if_target_returns_403():
+    """転送先が 403 などを返しても(判定不能として許容せず)、転送の時点で落とす。"""
+    import io
+    import urllib.request
+    from news_validation import _SafeRedirectHandler, _UnreviewedRedirect
+
+    class _Redirecting(urllib.request.BaseHandler):
+        handler_order = 100  # 標準の HTTPSHandler より先に使う(実ネットワークに出ない)
+
+        def https_open(self, req):
+            if "ctipilot" in req.full_url:
+                raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, io.BytesIO(b""))
+            headers = http.client.HTTPMessage()
+            headers["Location"] = "https://ctipilot.ch/entities/x/"
+            resp = urllib.response.addinfourl(io.BytesIO(b""), headers, req.full_url, 302)
+            resp.msg = "Found"
+            return resp
+
+    import urllib.response
+    opener = urllib.request.build_opener(_Redirecting(), _SafeRedirectHandler()).open
+    result = check_url("https://short.example/a", opener=opener)
+    assert not result.ok
+    assert "ctipilot.ch" in result.reason
+
+
+def test_http_error_at_unreviewed_ai_site_is_rejected():
+    exc = urllib.error.HTTPError("https://ctipilot.ch/entities/x/", 403, "Forbidden", {}, None)
+    result = check_url("https://short.example/a", opener=_raising(exc))
+    assert not result.ok
+    assert "ctipilot.ch" in result.reason

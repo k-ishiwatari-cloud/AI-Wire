@@ -247,7 +247,7 @@ def select_items(
         reason = digest_reason(item["title"], item["source_url"])
         if reason:
             print(
-                f"::warning:: {i}件目: 他サイトのまとめ記事とみなしたためスキップ [{reason}]"
+                f"::warning:: {i}件目: 他サイトのまとめ記事、または出典に使えないサイトとみなしたためスキップ [{reason}]"
                 f" ({item['title']} / {item['source_url']})",
                 file=sys.stderr,
             )
@@ -272,7 +272,7 @@ def select_items(
         check = url_checker(item["source_url"])
         if not check.ok:
             print(
-                f"::warning:: {i}件目: source_urlに到達できないためスキップ [{check.reason}] ({item['source_url']})",
+                f"::warning:: {i}件目: source_urlを出典に使えないためスキップ [{check.reason}] ({item['source_url']})",
                 file=sys.stderr,
             )
             continue

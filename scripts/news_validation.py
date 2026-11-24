@@ -2,7 +2,7 @@
 
 - タイトル類似度による重複判定(文字bigramのTF-IDFコサイン類似度)
 - web_search が実際に参照したURLとの照合
-- source_url の到達確認
+- source_url の到達確認(転送先が AI が自動生成し人の確認がないサイトなら除外)
 """
 from __future__ import annotations
 
@@ -131,6 +131,18 @@ _DATE_ONLY_SEGMENT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DATE_ARCHIVE_RE = re.compile(r"/([0-9]{4})/([0-9]{1,2})/([0-9]{1,2})/?$")
 
 
+# AI が自動生成し、人が確認していないと分かっているサイト(サブドメインを含む)。
+# 中身の正確さを確かめられないので、速報の出典にも週次まとめの根拠にも使わない。
+# ページ本文の表示から判定する方式は、AI 生成物を論じる通常の記事を誤って落とすため採らない。
+# 新しく見つかったら、ここに足す。
+# 例: ctipilot.ch は各ページに「AI-generated · no human review」と表示する集約サイト
+_UNREVIEWED_AI_HOSTS = {"ctipilot.ch"}
+
+
+def _is_unreviewed_ai_host(host: str) -> bool:
+    return any(host == h or host.endswith("." + h) for h in _UNREVIEWED_AI_HOSTS)
+
+
 # パスがこれだけなら、言語別のトップページ(例: https://ai.zhudong.net/en/)
 _LANGUAGE_SEGMENTS = {
     "en", "ja", "jp", "zh", "cn", "tw", "ko", "kr", "de", "fr", "es", "it", "pt", "ru", "ar",
@@ -143,21 +155,24 @@ def _url_parts(url: str) -> tuple[str, list[str]] | None:
     try:
         parts = urlsplit(url)
         path = unquote(parts.path)
-        host = (parts.hostname or "").removeprefix("www.")
+        host = (parts.hostname or "").rstrip(".").removeprefix("www.")
     except ValueError:
         return None
     return host, [s for s in path.lower().split("/") if s]
 
 
 def content_digest_reason(title: str, url: str) -> str | None:
-    """記事そのものがまとめ(見出しがまとめ、または出典がトップページで中身を確かめられない)なら、その判定理由。
+    """記事そのものがまとめ(見出しがまとめ、または出典がトップページで中身を確かめられない)か、
+    出典が AI が自動生成し人の確認がないサイトなら、その判定理由。
 
     出典が記事一覧や日付のページでも、中身が個別のニュースなら None(digest_reason では除外される)。
     AI WIRE の週次まとめの材料を選ぶのに使う。"""
     parts = _url_parts(url)
     if parts is None:
         return None
-    _, segments = parts
+    host, segments = parts
+    if _is_unreviewed_ai_host(host):
+        return f"AI が自動生成し人の確認がないサイト「{host}」"
     if not segments or (len(segments) == 1 and segments[0] in _LANGUAGE_SEGMENTS):
         return "トップページ"
     if match := _DIGEST_TITLE_RE.search(title):
@@ -312,6 +327,10 @@ class _BlockedHost(Exception):
     pass
 
 
+class _UnreviewedRedirect(Exception):
+    """転送先が AI が自動生成し人の確認がないサイト。転送先のステータス(403 など)に関わらず落とす。"""
+
+
 class _PublicHostOnlyHandler(urllib.request.BaseHandler):
     """モデル出力のURLで内部ネットワークへ到達しないよう、全リクエスト(リダイレクト先を含む)の宛先を検査する。"""
 
@@ -335,6 +354,11 @@ class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
             if fp is not None:
                 fp.close()
             raise _BlockedHost(f"不正なリダイレクト先: {newurl}")
+        target = _url_parts(newurl)
+        if target and _is_unreviewed_ai_host(target[0]):
+            if fp is not None:
+                fp.close()
+            raise _UnreviewedRedirect(target[0])
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -342,7 +366,8 @@ _default_opener = urllib.request.build_opener(_PublicHostOnlyHandler(), _SafeRed
 
 
 def check_url(url: str, opener: Callable[..., Any] | None = None, timeout: float = URL_CHECK_TIMEOUT) -> UrlCheck:
-    """URLが実在しないと断定できる場合(と内部アドレス宛て)のみ ok=False を返す。
+    """URLが実在しないと断定できる場合(と内部アドレス宛て)、および転送先が
+    AI が自動生成し人の確認がないサイトの場合のみ ok=False を返す。
 
     判定不能(タイムアウト、bot ブロック、サーバーエラー等)は ok=True とし、理由を reason に残す。
     """
@@ -352,12 +377,21 @@ def check_url(url: str, opener: Callable[..., Any] | None = None, timeout: float
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with opener(req, timeout=timeout) as resp:
+            # 転送先が使えないサイトなら、本文を読む前に落とす(読み込みのタイムアウトで素通りさせない)
+            final = _url_parts((resp.geturl() if hasattr(resp, "geturl") else None) or url)
+            if final and _is_unreviewed_ai_host(final[0]):
+                return UrlCheck(False, f"AI が自動生成し人の確認がないサイト「{final[0]}」への転送")
             resp.read(1024)
         return UrlCheck(True, "")
+    except _UnreviewedRedirect as exc:
+        return UrlCheck(False, f"AI が自動生成し人の確認がないサイト「{exc}」への転送")
     except _BlockedHost as exc:
         return UrlCheck(False, f"内部アドレス宛てのため拒否: {exc}")
     except urllib.error.HTTPError as exc:
         try:
+            failed_at = _url_parts(exc.geturl() or url)
+            if failed_at and _is_unreviewed_ai_host(failed_at[0]):
+                return UrlCheck(False, f"AI が自動生成し人の確認がないサイト「{failed_at[0]}」への転送")
             if exc.code in NOT_FOUND_STATUSES:
                 return UrlCheck(False, f"HTTP {exc.code}")
             return UrlCheck(True, f"HTTP {exc.code} (判定不能のため許容)")
